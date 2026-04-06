@@ -1,0 +1,117 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.empty, .ok {
+  font-size: 0.82rem;
+  color: var(--c-text-muted);
+  padding: 0.5rem;
+  text-align: center;
+}
+.ok { color: #4ade80; }
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--c-text-primary);
+  margin: 0;
+}
+
+.summary {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.badge {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.badge.error   { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+.badge.warning { background: rgba(251,191,36,0.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+.badge.info    { background: rgba(96,165,250,0.15);  color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+
+.diag {
+  border-radius: 5px;
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: 1px solid transparent;
+}
+.diag.error   { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.2); }
+.diag.warning { background: rgba(251,191,36,0.08);  border-color: rgba(251,191,36,0.2); }
+.diag.info    { background: rgba(96,165,250,0.08);  border-color: rgba(96,165,250,0.2); }
+
+.diagHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sev {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.diag.error .sev   { color: #f87171; }
+.diag.warning .sev { color: #fbbf24; }
+.diag.info .sev    { color: #60a5fa; }
+
+.lineRef {
+  font-size: 0.7rem;
+  color: var(--c-text-muted);
+  font-family: monospace;
+}
+
+.diagMsg {
+  font-size: 0.8rem;
+  color: var(--c-text-secondary);
+}
+
+.rawText {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  background: var(--c-surface-3);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.section {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.sectionTitle {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--c-accent);
+  margin-bottom: 0.4rem;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--c-text-secondary);
+  padding: 0.15rem 0;
+  border-bottom: 1px solid var(--c-border);
+  text-transform: capitalize;
+}
+
+.count {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--c-text-primary);
+}

@@ -1,0 +1,42 @@
+/* ─── Global tokens ──────────────────────────────────────────────────────── */
+:root {
+  --c-bg:            #0f1117;
+  --c-surface-1:     #141820;
+  --c-surface-2:     #1a2030;
+  --c-surface-3:     #202840;
+  --c-border:        #2d3748;
+  --c-accent:        #3b82f6;
+  --c-accent-hover:  #2563eb;
+  --c-text-primary:  #e2e8f0;
+  --c-text-secondary:#a0aec0;
+  --c-text-muted:    #64748b;
+  --c-nav-bg:        #0f1117;
+  --c-nav-border:    #1e2a3a;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--c-bg);
+  color: var(--c-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a5568; }
+
+/* React Flow overrides */
+.react-flow__attribution { display: none !important; }
+.react-flow__controls-button {
+  background: var(--c-surface-2) !important;
+  border-color: var(--c-border) !important;
+  color: var(--c-text-secondary) !important;
+}
