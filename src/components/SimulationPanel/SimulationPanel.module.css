@@ -1,10 +1,11 @@
+/* ─── Panel layout ──────────────────────────────────────────────────────── */
+
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 0;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .empty {
@@ -14,7 +15,15 @@
   text-align: center;
 }
 
+/* ─── Header ────────────────────────────────────────────────────────────── */
+
 .header {
+  padding: 0.75rem 1rem 0.5rem;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.headerTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -32,7 +41,7 @@
 .controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .btn {
@@ -40,8 +49,8 @@
   border: 1px solid var(--c-border);
   border-radius: 4px;
   color: var(--c-text-primary);
-  padding: 0.3rem 0.8rem;
-  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
   cursor: pointer;
   font-family: inherit;
 }
@@ -51,47 +60,166 @@
 .btnRun  { border-color: #4ade80; color: #4ade80; }
 .btnStop { border-color: #f87171; color: #f87171; }
 
-.stepCount {
-  font-size: 0.78rem;
+/* ─── Status bar ────────────────────────────────────────────────────────── */
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  font-family: monospace;
+}
+
+.stepCount { color: var(--c-text-muted); }
+.separator { color: var(--c-border); }
+.assertedCount { color: #f87171; font-weight: 700; }
+.quietCount { color: var(--c-text-muted); }
+.traceLabel { color: #4ade80; }
+
+/* ─── Tabs ──────────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.72rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: var(--c-text-primary); }
+.tabActive {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+
+.tabCount {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 0.65rem;
+  color: var(--c-text-muted);
+  font-weight: 400;
+}
+
+/* ─── Tab content ───────────────────────────────────────────────────────── */
+
+.tabContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+/* ─── Sections ──────────────────────────────────────────────────────────── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sectionInfo {
+  margin-bottom: 0.25rem;
+}
+
+.assertedBanner {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f87171;
+  font-family: monospace;
+}
+
+.quietBanner {
+  font-size: 0.72rem;
   color: var(--c-text-muted);
   font-family: monospace;
 }
 
-.columns {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
-  flex: 1;
-  overflow: hidden;
+.emptyList {
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+  text-align: center;
+  padding: 1rem 0;
 }
 
-@media (max-width: 640px) {
-  .columns { grid-template-columns: 1fr; }
+/* ─── Input groups ──────────────────────────────────────────────────────── */
+
+.group {
+  margin-bottom: 0.25rem;
 }
 
-.col {
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.3rem 0.4rem;
   background: var(--c-surface-2);
   border: 1px solid var(--c-border);
-  border-radius: 6px;
-  padding: 0.6rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  overflow-y: auto;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--c-text-primary);
+}
+.groupHeader:hover { background: var(--c-surface-3); }
+
+.groupChevron {
+  font-size: 0.6rem;
+  color: var(--c-text-muted);
+  width: 10px;
 }
 
-.colTitle {
-  font-size: 0.74rem;
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.2rem;
+.groupLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  flex: 1;
+  text-align: left;
 }
+
+.groupCount {
+  font-size: 0.65rem;
+  color: var(--c-text-muted);
+  font-family: monospace;
+}
+
+/* ─── Search ────────────────────────────────────────────────────────────── */
+
+.searchInput {
+  width: 100%;
+  padding: 0.3rem 0.6rem;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  color: var(--c-text-primary);
+  font-size: 0.78rem;
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 0.35rem;
+}
+.searchInput:focus { border-color: var(--c-accent); }
+.searchInput::placeholder { color: var(--c-text-muted); opacity: 0.6; }
+
+/* ─── Node list ─────────────────────────────────────────────────────────── */
 
 .nodeList {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .nodeBtn, .nodeRow {
@@ -104,6 +232,7 @@
   border: 1px solid transparent;
   font-family: inherit;
   cursor: default;
+  min-height: 28px;
 }
 
 .nodeBtn {
@@ -120,19 +249,33 @@
 }
 
 .nodeOutputActive {
-  background: rgba(248,113,113,0.15);
-  border-color: rgba(248,113,113,0.4) !important;
+  background: rgba(248,113,113,0.12);
+  border-color: rgba(248,113,113,0.35) !important;
+}
+
+.nodeFocused {
+  background: rgba(74,222,128,0.15);
+  border-color: #4ade80 !important;
+  box-shadow: 0 0 6px rgba(74,222,128,0.3);
+}
+
+.nodeLatchActive {
+  background: rgba(217,119,6,0.12);
+  border-color: rgba(217,119,6,0.4) !important;
 }
 
 .nodeId {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-family: monospace;
   color: var(--c-text-primary);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .nodeState {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-family: monospace;
   font-weight: 700;
   min-width: 16px;
@@ -141,3 +284,138 @@
 
 .stateOn  { color: #4ade80; }
 .stateOff { color: #4a5568; }
+
+/* ─── Badges ────────────────────────────────────────────────────────────── */
+
+.forcedBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #000;
+  font-size: 9px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.classBadge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0 3px;
+  border: 1px solid;
+  border-radius: 2px;
+  letter-spacing: 0.03em;
+}
+
+.latchBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #d97706;
+  color: #000;
+  font-size: 9px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.changedDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #facc15;
+  animation: pulse-dot 0.6s ease-out;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* ─── Timer display ─────────────────────────────────────────────────────── */
+
+.timerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.timerState {
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: 0.04em;
+}
+
+.timerBarRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.timerBar {
+  flex: 1;
+  height: 5px;
+  background: var(--c-surface-2);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+}
+
+.timerFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.15s ease;
+}
+
+.timerCount {
+  font-size: 0.65rem;
+  font-family: monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ─── Expand button ─────────────────────────────────────────────────────── */
+
+.expandBtn {
+  margin-top: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  color: var(--c-text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+.expandBtn:hover { background: var(--c-surface-3); color: var(--c-text-primary); }
+
+/* ─── Mobile accordion ──────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .tabs {
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+  .tab {
+    padding: 0.35rem 0.3rem;
+    font-size: 0.65rem;
+  }
+  .tabContent {
+    padding: 0.4rem 0.5rem;
+  }
+  .headerTop {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

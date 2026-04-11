@@ -2,7 +2,7 @@
 import type { ImportedSettingsDocument, ImportedSetting } from '../importer/types';
 import { parseExpression } from '../parser/parser';
 import type { AnyASTNode } from '../parser/types';
-import type { IRGraph, IRNode, IREdge, IRNodeKind } from './types';
+import type { IRGraph, IRNode, IREdge, IRNodeKind, OutputClass } from './types';
 
 // Well-known SEL output coil names — both QuickSet and .txt export naming
 const OUTPUT_NAMES = new Set([
@@ -38,6 +38,21 @@ function isLogicExpression(value: string): boolean {
 function nodeKindForName(name: string): IRNodeKind {
   if (OUTPUT_NAMES.has(name)) return 'output';
   return 'derived';
+}
+
+function classifyOutput(name: string): OutputClass | undefined {
+  const n = name.toUpperCase();
+  if (/^(TR|TRIP|TRIP_[ABC]|TRIP_BUS)$/.test(n)) return 'trip';
+  if (/^(CL|CLOSE)$/.test(n)) return 'close';
+  if (/^(ALARM|ALM|ALRMOUT|SALARM)$/.test(n)) return 'alarm';
+  if (/^(BFI|BFT|BF|86|86BF)$/.test(n)) return 'breaker_failure';
+  if (/^79/.test(n)) return 'reclose';
+  if (/^(BLOCK_|BLK_)/.test(n)) return 'block';
+  if (/^DP[0-9]/.test(n)) return 'display';
+  if (/^LED[0-9]/.test(n)) return 'led';
+  if (/^SS[1-6]$/.test(n)) return 'supervisory';
+  if (/^OUT[0-9]/.test(n)) return 'other';
+  return undefined;
 }
 
 let _counter = 0;
@@ -221,6 +236,7 @@ export function buildIR(doc: ImportedSettingsDocument): IRGraph {
         const targetNode = ensureNode(name, nodeKindForName(name));
         targetNode.sourceSettingName = name;
         targetNode.sourceRawValue = value;
+        if (targetNode.kind === 'output') targetNode.outputClass = classifyOutput(name);
         ensureNode(trimmed.toUpperCase());
         addEdge(trimmed.toUpperCase(), name);
       }
@@ -232,6 +248,7 @@ export function buildIR(doc: ImportedSettingsDocument): IRGraph {
     const targetNode = ensureNode(name, kind);
     targetNode.sourceSettingName = name;
     targetNode.sourceRawValue = value;
+    if (kind === 'output') targetNode.outputClass = classifyOutput(name);
 
     const rootId = buildNode(result.ast);
     if (rootId !== name) {

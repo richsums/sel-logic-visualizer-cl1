@@ -20,30 +20,50 @@ const nodeTypes = { selNode: SelNode };
 export function GraphView() {
   const {
     graph, simState, selectedNodeId, highlightedNodeIds,
+    simFocusedOutputId, simActivePaths,
     setSelectedNodeId, setHighlightedNodeIds, setActivePanel,
+    setSimFocusedOutputId,
   } = useAppStore();
 
   const { nodes: flowNodes, edges: flowEdges } = useMemo(() => {
     if (!graph) return { nodes: [], edges: [] };
-    return buildFlowGraph(graph, simState, selectedNodeId, highlightedNodeIds);
-  }, [graph, simState, selectedNodeId, highlightedNodeIds]);
+    return buildFlowGraph(
+      graph, simState, selectedNodeId, highlightedNodeIds,
+      simActivePaths, simFocusedOutputId,
+    );
+  }, [graph, simState, selectedNodeId, highlightedNodeIds, simActivePaths, simFocusedOutputId]);
 
   const [, , onNodesChange] = useNodesState(flowNodes);
   const [, , onEdgesChange] = useEdgesState(flowEdges);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     if (!graph) return;
+
+    // If simulation is active and this is an output node, toggle causal path focus
+    const irNode = graph.nodes.get(node.id);
+    if (simState && irNode?.kind === 'output') {
+      if (simFocusedOutputId === node.id) {
+        // Click same output again → clear focus
+        setSimFocusedOutputId(null);
+      } else {
+        setSimFocusedOutputId(node.id);
+      }
+      return;
+    }
+
+    // Normal mode: select + trace + show analysis
     setSelectedNodeId(node.id);
     const trace = traceNode(graph, node.id);
     const highlighted = new Set([...trace.upstream, node.id, ...trace.downstream]);
     setHighlightedNodeIds(highlighted);
     setActivePanel('analysis');
-  }, [graph, setSelectedNodeId, setHighlightedNodeIds, setActivePanel]);
+  }, [graph, simState, simFocusedOutputId, setSelectedNodeId, setHighlightedNodeIds, setActivePanel, setSimFocusedOutputId]);
 
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
     setHighlightedNodeIds(new Set());
-  }, [setSelectedNodeId, setHighlightedNodeIds]);
+    setSimFocusedOutputId(null);
+  }, [setSelectedNodeId, setHighlightedNodeIds, setSimFocusedOutputId]);
 
   if (!graph) {
     return (
@@ -82,6 +102,21 @@ export function GraphView() {
           style={{ background: '#1a202c' }}
         />
       </ReactFlow>
+      {simFocusedOutputId && (
+        <div className={styles.focusBanner}>
+          Tracing: <strong>{simFocusedOutputId}</strong>
+          <button
+            onClick={() => setSimFocusedOutputId(null)}
+            style={{
+              marginLeft: 8, background: 'none', border: '1px solid #4b5563',
+              color: '#9ca3af', borderRadius: 3, padding: '1px 6px', cursor: 'pointer',
+              fontSize: 11,
+            }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
       <div className={styles.legend}>
         {[
           { kind: 'input', label: 'Input' },

@@ -15,6 +15,10 @@ export type IRNodeKind =
   | 'function'
   | 'numeric';    // numeric setting (pickups, delays)
 
+export type OutputClass =
+  | 'trip' | 'close' | 'alarm' | 'block' | 'reclose'
+  | 'breaker_failure' | 'display' | 'led' | 'supervisory' | 'other';
+
 export interface IRNode {
   id: string;           // e.g. "TR", "50P1", "and_3"
   kind: IRNodeKind;
@@ -24,6 +28,8 @@ export interface IRNode {
   // For timer/numeric nodes
   timerFn?: string;
   numericValue?: string;
+  // For output nodes — classification
+  outputClass?: OutputClass;
 }
 
 export interface IREdge {

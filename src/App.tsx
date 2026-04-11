@@ -45,11 +45,42 @@ function PanelContent({ panel }: { panel: AppPanel }) {
 }
 
 export function App() {
-  const { activePanel, setActivePanel, docA, graph } = useAppStore();
+  const { activePanel, setActivePanel, docA, graph, simState, simRunning } = useAppStore();
   const hasDoc = !!docA;
+  const isSimActive = !!simState;
+
+  // Count asserted outputs for the banner
+  let assertedOutputs = 0;
+  if (simState && graph) {
+    for (const [id, node] of graph.nodes) {
+      if (node.kind === 'output' && (simState.signals.get(id) ?? false)) {
+        assertedOutputs++;
+      }
+    }
+  }
 
   return (
     <div className={styles.root}>
+      {/* Simulation mode banner */}
+      {isSimActive && (
+        <div className={styles.simBanner}>
+          <span className={styles.simBannerDot} />
+          <span>SIMULATION MODE</span>
+          <span className={styles.simBannerSep}>|</span>
+          <span>Step: {simState!.step}</span>
+          <span className={styles.simBannerSep}>|</span>
+          <span className={assertedOutputs > 0 ? styles.simBannerAlert : ''}>
+            {assertedOutputs} output{assertedOutputs !== 1 ? 's' : ''} asserted
+          </span>
+          {simRunning && (
+            <>
+              <span className={styles.simBannerSep}>|</span>
+              <span className={styles.simBannerRunning}>RUNNING</span>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Top bar */}
       <header className={styles.topbar}>
         <div className={styles.logoArea}>

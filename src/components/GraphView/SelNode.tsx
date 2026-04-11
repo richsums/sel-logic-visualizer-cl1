@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import type { IRNodeKind } from '../../core/ir/types';
+import type { IRNodeKind, OutputClass } from '../../core/ir/types';
+import type { TimerInfo } from '../../core/simulation/engine';
 
 interface SelNodeData {
   label: string;
@@ -9,6 +10,14 @@ interface SelNodeData {
   selected: boolean;
   highlighted: boolean;
   sourceValue?: string;
+  // Simulation-enhanced fields
+  causal: boolean;
+  dimmed: boolean;
+  latched: boolean;
+  forced: boolean;
+  timerInfo?: TimerInfo;
+  outputClass?: OutputClass;
+  changedThisStep: boolean;
 }
 
 // ─── Color scheme per kind ────────────────────────────────────────────────────
@@ -35,6 +44,133 @@ function getColors(kind: IRNodeKind, active: boolean, selected: boolean, highlig
   if (selected) return { fill: base.fill, stroke: '#facc15', text: '#facc15' };
   if (highlighted) return { fill: base.fill, stroke: '#60a5fa', text: base.text };
   return base;
+}
+
+// ─── Output class labels ────────────────────────────────────────────────────
+
+const OUTPUT_CLASS_LABELS: Record<OutputClass, { text: string; color: string }> = {
+  trip: { text: 'TRIP', color: '#ef4444' },
+  close: { text: 'CLOSE', color: '#3b82f6' },
+  alarm: { text: 'ALARM', color: '#f59e0b' },
+  breaker_failure: { text: 'BF', color: '#ef4444' },
+  reclose: { text: 'RECLOSE', color: '#8b5cf6' },
+  block: { text: 'BLOCK', color: '#6b7280' },
+  display: { text: 'DISP', color: '#06b6d4' },
+  led: { text: 'LED', color: '#22d3ee' },
+  supervisory: { text: 'SUPV', color: '#a78bfa' },
+  other: { text: 'OUT', color: '#9ca3af' },
+};
+
+// ─── Badge components ───────────────────────────────────────────────────────
+
+function ForcedBadge() {
+  return (
+    <div style={{
+      position: 'absolute', top: -6, right: -6, zIndex: 10,
+      width: 16, height: 16, borderRadius: '50%',
+      background: '#f59e0b', color: '#000',
+      fontSize: 10, fontWeight: 900, fontFamily: 'monospace',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      border: '1.5px solid #fbbf24',
+      boxShadow: '0 0 4px rgba(245,158,11,0.6)',
+    }}>
+      F
+    </div>
+  );
+}
+
+function LatchedBadge() {
+  return (
+    <div style={{
+      position: 'absolute', top: -6, left: -6, zIndex: 10,
+      width: 16, height: 16, borderRadius: '50%',
+      background: '#d97706', color: '#000',
+      fontSize: 9, fontWeight: 900,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      border: '1.5px solid #fbbf24',
+    }} title="Latched ON">
+      L
+    </div>
+  );
+}
+
+function OutputClassBadge({ outputClass }: { outputClass: OutputClass }) {
+  const info = OUTPUT_CLASS_LABELS[outputClass];
+  return (
+    <div style={{
+      position: 'absolute', bottom: -14, left: '50%', transform: 'translateX(-50%)',
+      fontSize: 8, fontWeight: 800, fontFamily: 'monospace',
+      color: info.color, letterSpacing: '0.05em',
+      textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+      whiteSpace: 'nowrap',
+    }}>
+      {info.text}
+    </div>
+  );
+}
+
+function TimerProgressBar({ timerInfo }: { timerInfo: TimerInfo }) {
+  const { state, currentTicks, thresholdTicks } = timerInfo;
+  const fraction = thresholdTicks > 0 ? Math.min(currentTicks / thresholdTicks, 1) : 0;
+
+  const stateColors: Record<string, string> = {
+    idle: '#4b5563',
+    timing: '#3b82f6',
+    qualified: '#22c55e',
+    reset: '#ef4444',
+  };
+  const barColor = stateColors[state] ?? '#4b5563';
+  const stateLabel = state === 'qualified' ? 'QUAL' : state.toUpperCase();
+
+  return (
+    <div style={{
+      position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)',
+      display: 'flex', alignItems: 'center', gap: 3,
+      whiteSpace: 'nowrap',
+    }}>
+      {/* Progress bar */}
+      <div style={{
+        width: 36, height: 5, background: '#1f2937', borderRadius: 2,
+        overflow: 'hidden', border: '1px solid #374151',
+      }}>
+        <div style={{
+          width: `${fraction * 100}%`, height: '100%',
+          background: barColor, borderRadius: 2,
+          transition: 'width 0.15s ease',
+        }} />
+      </div>
+      {/* Tick count */}
+      <span style={{
+        fontSize: 7, fontFamily: 'monospace', fontWeight: 700,
+        color: barColor,
+      }}>
+        {currentTicks}/{thresholdTicks}
+      </span>
+      {/* State label */}
+      <span style={{
+        fontSize: 6, fontFamily: 'monospace', fontWeight: 700,
+        color: barColor, opacity: 0.8,
+      }}>
+        {stateLabel}
+      </span>
+    </div>
+  );
+}
+
+// ─── Changed-output flash keyframes (injected once) ─────────────────────────
+
+const FLASH_STYLE_ID = 'sel-node-flash-style';
+if (typeof document !== 'undefined' && !document.getElementById(FLASH_STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = FLASH_STYLE_ID;
+  style.textContent = `
+    @keyframes sel-output-flash {
+      0% { box-shadow: 0 0 0 0 rgba(250,204,21,0.8); }
+      50% { box-shadow: 0 0 14px 4px rgba(250,204,21,0.6); }
+      100% { box-shadow: 0 0 0 0 rgba(250,204,21,0); }
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 // ─── AND gate (IEEE Std 91: flat left, D-curve right) ────────────────────────
@@ -86,27 +222,22 @@ function NotGateShape({ c }: { c: ReturnType<typeof getColors> }) {
 }
 
 // ─── Timer (IEEE: rectangle with clock annotation, PU/DO corners) ────────────
-// Node: 100x52. Rectangle with timing notation.
+// Node: 100x52
 function TimerShape({ c, label }: { c: ReturnType<typeof getColors>; label: string }) {
   return (
     <svg width="100" height="52" viewBox="0 0 100 52" style={{ display: 'block' }}>
-      {/* Main rectangle */}
       <rect x="4" y="4" width="86" height="44" rx="3"
         fill={c.fill} stroke={c.stroke} strokeWidth="2"
       />
-      {/* Clock/timer icon in top-right */}
       <circle cx="78" cy="15" r="6" fill="none" stroke={c.stroke} strokeWidth="1" opacity="0.6" />
       <line x1="78" y1="15" x2="78" y2="11" stroke={c.stroke} strokeWidth="1" opacity="0.6" />
       <line x1="78" y1="15" x2="81" y2="15" stroke={c.stroke} strokeWidth="1" opacity="0.6" />
-      {/* Label: function name (PCT, TON, TOF) */}
       <text x="40" y="22" textAnchor="middle" fontSize="11" fontWeight="bold"
             fontFamily="monospace" fill={c.text}>{label}</text>
-      {/* PU/DO annotation */}
       <text x="18" y="42" textAnchor="middle" fontSize="8" fontFamily="monospace"
             fill={c.stroke} opacity="0.7">PU</text>
       <text x="66" y="42" textAnchor="middle" fontSize="8" fontFamily="monospace"
             fill={c.stroke} opacity="0.7">DO</text>
-      {/* Input/output stubs */}
       <line x1="0" y1="26" x2="4" y2="26" stroke={c.stroke} strokeWidth="1.5" />
       <line x1="90" y1="26" x2="100" y2="26" stroke={c.stroke} strokeWidth="1.5" />
     </svg>
@@ -119,25 +250,18 @@ function LatchShape({ c, label }: { c: ReturnType<typeof getColors>; label: stri
   const isSet = label === 'SET' || label === 'S';
   return (
     <svg width="90" height="56" viewBox="0 0 90 56" style={{ display: 'block' }}>
-      {/* Main rectangle */}
       <rect x="4" y="4" width="76" height="48" rx="3"
         fill={c.fill} stroke={c.stroke} strokeWidth="2"
       />
-      {/* S input label */}
       <text x="14" y="22" textAnchor="start" fontSize="10" fontWeight="bold"
             fontFamily="monospace" fill={isSet ? '#4ade80' : c.text}>S</text>
-      {/* R input label */}
       <text x="14" y="44" textAnchor="start" fontSize="10" fontWeight="bold"
             fontFamily="monospace" fill={!isSet ? '#ef4444' : c.text}>R</text>
-      {/* Q output */}
       <text x="70" y="30" textAnchor="end" fontSize="10" fontWeight="bold"
             fontFamily="monospace" fill={c.text}>Q</text>
-      {/* Center label */}
       <text x="44" y="32" textAnchor="middle" fontSize="9" fontWeight="600"
             fontFamily="monospace" fill={c.stroke} opacity="0.7">LATCH</text>
-      {/* Divider line */}
       <line x1="28" y1="8" x2="28" y2="48" stroke={c.stroke} strokeWidth="0.5" opacity="0.3" />
-      {/* Input/output stubs */}
       <line x1="0" y1="18" x2="4" y2="18" stroke={c.stroke} strokeWidth="1.5" />
       <line x1="0" y1="40" x2="4" y2="40" stroke={c.stroke} strokeWidth="1.5" />
       <line x1="80" y1="28" x2="90" y2="28" stroke={c.stroke} strokeWidth="1.5" />
@@ -145,52 +269,44 @@ function LatchShape({ c, label }: { c: ReturnType<typeof getColors>; label: stri
   );
 }
 
-// ─── Rising Edge Trigger (IEEE: rectangle with rising-edge symbol) ───────────
+// ─── Rising Edge Trigger ────────────────────────────────────────────────────
 // Node: 80x42
-function RisingEdgeShape({ c, label }: { c: ReturnType<typeof getColors>; label: string }) {
+function RisingEdgeShape({ c }: { c: ReturnType<typeof getColors> }) {
   return (
     <svg width="80" height="42" viewBox="0 0 80 42" style={{ display: 'block' }}>
       <rect x="4" y="4" width="66" height="34" rx="3"
         fill={c.fill} stroke={c.stroke} strokeWidth="2"
       />
-      {/* Rising edge symbol: step waveform going up */}
       <polyline points="14,28 14,14 26,14" fill="none"
         stroke={c.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
       />
-      {/* Arrow pointing up on the rising edge */}
       <polyline points="12,18 14,13 16,18" fill="none"
         stroke={c.text} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
       />
-      {/* Label */}
       <text x="48" y="25" textAnchor="middle" fontSize="9" fontWeight="bold"
             fontFamily="monospace" fill={c.text}>R_TRIG</text>
-      {/* Stubs */}
       <line x1="0" y1="21" x2="4" y2="21" stroke={c.stroke} strokeWidth="1.5" />
       <line x1="70" y1="21" x2="80" y2="21" stroke={c.stroke} strokeWidth="1.5" />
     </svg>
   );
 }
 
-// ─── Falling Edge Trigger (IEEE: rectangle with falling-edge symbol) ─────────
+// ─── Falling Edge Trigger ───────────────────────────────────────────────────
 // Node: 80x42
-function FallingEdgeShape({ c, label }: { c: ReturnType<typeof getColors>; label: string }) {
+function FallingEdgeShape({ c }: { c: ReturnType<typeof getColors> }) {
   return (
     <svg width="80" height="42" viewBox="0 0 80 42" style={{ display: 'block' }}>
       <rect x="4" y="4" width="66" height="34" rx="3"
         fill={c.fill} stroke={c.stroke} strokeWidth="2"
       />
-      {/* Falling edge symbol: step waveform going down */}
       <polyline points="14,14 14,28 26,28" fill="none"
         stroke={c.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
       />
-      {/* Arrow pointing down */}
       <polyline points="12,24 14,29 16,24" fill="none"
         stroke={c.text} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
       />
-      {/* Label */}
       <text x="48" y="25" textAnchor="middle" fontSize="9" fontWeight="bold"
             fontFamily="monospace" fill={c.text}>F_TRIG</text>
-      {/* Stubs */}
       <line x1="0" y1="21" x2="4" y2="21" stroke={c.stroke} strokeWidth="1.5" />
       <line x1="70" y1="21" x2="80" y2="21" stroke={c.stroke} strokeWidth="1.5" />
     </svg>
@@ -205,7 +321,6 @@ function PulseShape({ c }: { c: ReturnType<typeof getColors> }) {
       <rect x="4" y="4" width="66" height="34" rx="3"
         fill={c.fill} stroke={c.stroke} strokeWidth="2"
       />
-      {/* Pulse waveform */}
       <polyline points="14,28 14,14 22,14 22,28" fill="none"
         stroke={c.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
       />
@@ -283,115 +398,125 @@ function NamedNodeShape({
   );
 }
 
+// ─── Wrapper with simulation overlays ────────────────────────────────────────
+
+function NodeWrapper({
+  data, children,
+}: {
+  data: SelNodeData;
+  children: React.ReactNode;
+}) {
+  const c = getColors(data.kind, data.active, data.selected, data.highlighted);
+  const handleStyle = { background: c.stroke, width: 8, height: 8, border: `2px solid ${c.stroke}` };
+
+  // Glow effects
+  let glow = 'none';
+  if (data.changedThisStep) {
+    glow = 'none'; // flash animation handles it
+  } else if (data.causal) {
+    glow = '0 0 12px rgba(74,222,128,0.7)';
+  } else if (data.active) {
+    glow = '0 0 10px rgba(74,222,128,0.6)';
+  } else if (data.selected) {
+    glow = '0 0 8px rgba(250,204,21,0.5)';
+  } else if (data.highlighted) {
+    glow = '0 0 6px rgba(96,165,250,0.4)';
+  }
+
+  // Dimming for non-causal nodes during focus mode
+  const opacity = data.dimmed ? 0.25 : 1;
+
+  // Border override for forced inputs
+  const forcedBorderStyle = data.forced
+    ? { borderStyle: 'dashed' as const, borderColor: '#f59e0b', borderWidth: 2 }
+    : {};
+
+  // Latched double-border
+  const latchedStyle = data.latched
+    ? { outline: '2px solid #d97706', outlineOffset: '2px' }
+    : {};
+
+  // Changed flash animation
+  const flashAnimation = data.changedThisStep
+    ? { animation: 'sel-output-flash 0.6s ease-out' }
+    : {};
+
+  return (
+    <div style={{
+      position: 'relative',
+      boxShadow: glow,
+      borderRadius: 5,
+      opacity,
+      transition: 'opacity 0.2s ease',
+      ...forcedBorderStyle,
+      ...latchedStyle,
+      ...flashAnimation,
+    }}>
+      {data.forced && <ForcedBadge />}
+      {data.latched && <LatchedBadge />}
+      <Handle type="target" position={Position.Left}
+        style={{ ...handleStyle, top: data.kind === 'latch' ? '32%' : '50%' }} />
+      {children}
+      <Handle type="source" position={Position.Right}
+        style={{ ...handleStyle, top: '50%' }} />
+      {data.outputClass && <OutputClassBadge outputClass={data.outputClass} />}
+      {data.timerInfo && data.timerInfo.state !== 'idle' && (
+        <TimerProgressBar timerInfo={data.timerInfo} />
+      )}
+    </div>
+  );
+}
+
 // ─── Main exported node ───────────────────────────────────────────────────────
 
 export const SelNode = memo(({ data }: { data: SelNodeData }) => {
   const c = getColors(data.kind, data.active, data.selected, data.highlighted);
-  const glow = data.active
-    ? '0 0 10px rgba(74,222,128,0.6)'
-    : data.selected
-    ? '0 0 8px rgba(250,204,21,0.5)'
-    : data.highlighted
-    ? '0 0 6px rgba(96,165,250,0.4)'
-    : 'none';
-
-  const handleStyle = { background: c.stroke, width: 8, height: 8, border: `2px solid ${c.stroke}` };
 
   // AND gate
   if (data.kind === 'and') {
-    return (
-      <div style={{ position: 'relative', boxShadow: glow, borderRadius: 4 }}>
-        <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '50%' }} />
-        <AndGateShape c={c} />
-        <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-      </div>
-    );
+    return <NodeWrapper data={data}><AndGateShape c={c} /></NodeWrapper>;
   }
 
   // OR gate
   if (data.kind === 'or') {
-    return (
-      <div style={{ position: 'relative', boxShadow: glow, borderRadius: 4 }}>
-        <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '50%' }} />
-        <OrGateShape c={c} />
-        <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-      </div>
-    );
+    return <NodeWrapper data={data}><OrGateShape c={c} /></NodeWrapper>;
   }
 
   // NOT / inverter
   if (data.kind === 'not') {
-    return (
-      <div style={{ position: 'relative', boxShadow: glow, borderRadius: 4 }}>
-        <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '50%' }} />
-        <NotGateShape c={c} />
-        <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-      </div>
-    );
+    return <NodeWrapper data={data}><NotGateShape c={c} /></NodeWrapper>;
   }
 
-  // Timer (PCT, TON, TOF)
+  // Timer
   if (data.kind === 'timer') {
-    return (
-      <div style={{ position: 'relative', boxShadow: glow, borderRadius: 4 }}>
-        <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '50%' }} />
-        <TimerShape c={c} label={data.label} />
-        <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-      </div>
-    );
+    return <NodeWrapper data={data}><TimerShape c={c} label={data.label} /></NodeWrapper>;
   }
 
-  // Latch (SET/RST SR flip-flop)
+  // Latch
   if (data.kind === 'latch') {
-    return (
-      <div style={{ position: 'relative', boxShadow: glow, borderRadius: 4 }}>
-        <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '32%' }} />
-        <LatchShape c={c} label={data.label} />
-        <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-      </div>
-    );
+    return <NodeWrapper data={data}><LatchShape c={c} label={data.label} /></NodeWrapper>;
   }
 
   // Rising edge trigger
   if (data.kind === 'rising') {
-    return (
-      <div style={{ position: 'relative', boxShadow: glow, borderRadius: 4 }}>
-        <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '50%' }} />
-        <RisingEdgeShape c={c} label={data.label} />
-        <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-      </div>
-    );
+    return <NodeWrapper data={data}><RisingEdgeShape c={c} /></NodeWrapper>;
   }
 
   // Falling edge trigger
   if (data.kind === 'falling') {
-    return (
-      <div style={{ position: 'relative', boxShadow: glow, borderRadius: 4 }}>
-        <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '50%' }} />
-        <FallingEdgeShape c={c} label={data.label} />
-        <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-      </div>
-    );
+    return <NodeWrapper data={data}><FallingEdgeShape c={c} /></NodeWrapper>;
   }
 
-  // Pulse (one-shot)
+  // Pulse
   if (data.kind === 'pulse') {
-    return (
-      <div style={{ position: 'relative', boxShadow: glow, borderRadius: 4 }}>
-        <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '50%' }} />
-        <PulseShape c={c} />
-        <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-      </div>
-    );
+    return <NodeWrapper data={data}><PulseShape c={c} /></NodeWrapper>;
   }
 
-  // All other node types: named rectangular node
+  // Named nodes (input, output, derived, function)
   return (
-    <div style={{ position: 'relative', boxShadow: glow, borderRadius: 5 }}>
-      <Handle type="target" position={Position.Left}  style={{ ...handleStyle, top: '50%' }} />
+    <NodeWrapper data={data}>
       <NamedNodeShape label={data.label} kind={data.kind} c={c} sourceValue={data.sourceValue} />
-      <Handle type="source" position={Position.Right} style={{ ...handleStyle, top: '50%' }} />
-    </div>
+    </NodeWrapper>
   );
 });
 

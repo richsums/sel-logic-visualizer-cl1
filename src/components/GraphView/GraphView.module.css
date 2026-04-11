@@ -44,3 +44,20 @@
 .legendItem[data-kind="rising"]  { background: #2d4a2d; border-color: #4a8e4a; color: #90e090; }
 .legendItem[data-kind="falling"] { background: #4a4a2d; border-color: #8e8e4a; color: #e0d870; }
 .legendItem[data-kind="pulse"]   { background: #2d4a4a; border-color: #4a8e8e; color: #70e0e0; }
+
+.focusBanner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #22c55e;
+  border-radius: 6px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #4ade80;
+  z-index: 20;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}

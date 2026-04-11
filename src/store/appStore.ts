@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import type { ImportedSettingsDocument } from '../core/importer/types';
 import type { IRGraph } from '../core/ir/types';
-import type { SimState } from '../core/simulation/engine';
+import type { SimState, ActivePathRecord } from '../core/simulation/engine';
 import type { ComparisonResult } from '../core/comparison/engine';
 import type { AnalysisReport } from '../core/analysis/engine';
 
@@ -18,10 +18,12 @@ export type AppPanel =
   | 'comparison'
   | 'tutorial';
 
+export type SimViewMode = 'compact' | 'expanded';
+
 interface AppState {
   // Documents
   docA: ImportedSettingsDocument | null;
-  docB: ImportedSettingsDocument | null;  // for comparison
+  docB: ImportedSettingsDocument | null;
 
   // Derived
   graph: IRGraph | null;
@@ -31,6 +33,10 @@ interface AppState {
   // Simulation
   simState: SimState | null;
   simRunning: boolean;
+  simFocusedOutputId: string | null;
+  simActivePaths: ActivePathRecord[];
+  simInputFilter: string;
+  simViewMode: SimViewMode;
 
   // UI state
   activePanel: AppPanel;
@@ -45,6 +51,10 @@ interface AppState {
   setComparisonResult: (r: ComparisonResult) => void;
   setSimState: (s: SimState) => void;
   setSimRunning: (v: boolean) => void;
+  setSimFocusedOutputId: (id: string | null) => void;
+  setSimActivePaths: (paths: ActivePathRecord[]) => void;
+  setSimInputFilter: (filter: string) => void;
+  setSimViewMode: (mode: SimViewMode) => void;
   setActivePanel: (p: AppPanel) => void;
   setSelectedNodeId: (id: string | null) => void;
   setHighlightedNodeIds: (ids: Set<string>) => void;
@@ -59,6 +69,10 @@ export const useAppStore = create<AppState>((set) => ({
   comparisonResult: null,
   simState: null,
   simRunning: false,
+  simFocusedOutputId: null,
+  simActivePaths: [],
+  simInputFilter: '',
+  simViewMode: 'expanded',
   activePanel: 'import',
   selectedNodeId: null,
   highlightedNodeIds: new Set(),
@@ -70,12 +84,17 @@ export const useAppStore = create<AppState>((set) => ({
   setComparisonResult: (comparisonResult) => set({ comparisonResult }),
   setSimState: (simState) => set({ simState }),
   setSimRunning: (simRunning) => set({ simRunning }),
+  setSimFocusedOutputId: (simFocusedOutputId) => set({ simFocusedOutputId }),
+  setSimActivePaths: (simActivePaths) => set({ simActivePaths }),
+  setSimInputFilter: (simInputFilter) => set({ simInputFilter }),
+  setSimViewMode: (simViewMode) => set({ simViewMode }),
   setActivePanel: (activePanel) => set({ activePanel }),
   setSelectedNodeId: (selectedNodeId) => set({ selectedNodeId }),
   setHighlightedNodeIds: (highlightedNodeIds) => set({ highlightedNodeIds }),
   reset: () => set({
     docA: null, docB: null, graph: null, analysisReport: null,
     comparisonResult: null, simState: null, simRunning: false,
+    simFocusedOutputId: null, simActivePaths: [], simInputFilter: '',
     selectedNodeId: null, highlightedNodeIds: new Set(),
   }),
 }));
