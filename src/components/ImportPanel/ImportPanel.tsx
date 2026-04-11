@@ -7,6 +7,12 @@ import { useAppStore } from '../../store/appStore';
 import { EXAMPLE_FEEDER_SETTINGS, EXAMPLE_CSV_SETTINGS, EXAMPLE_XFMR_SETTINGS } from '../../fixtures/exampleSettings';
 import styles from './ImportPanel.module.css';
 
+// Strip non-printable control characters that SEL relay files may contain
+// (carriage returns, null bytes, EOF markers, BOM, etc.)
+function sanitizeText(raw: string): string {
+  return raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').replace(/\r\n?/g, '\n');
+}
+
 export function ImportPanel() {
   const [text, setText] = useState('');
   const [label, setLabel] = useState('Relay Settings');
@@ -39,7 +45,7 @@ export function ImportPanel() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const content = ev.target?.result as string;
-      if (content) setText(content);
+      if (content) setText(sanitizeText(content));
     };
     reader.readAsText(file);
     // Reset input so the same file can be re-selected
@@ -83,7 +89,7 @@ export function ImportPanel() {
       <textarea
         className={styles.textarea}
         value={text}
-        onChange={e => setText(e.target.value)}
+        onChange={e => setText(sanitizeText(e.target.value))}
         placeholder={'Paste SHO SET output here…\n\nOr use "Import from .txt" to load a relay settings file directly.'}
         spellCheck={false}
       />

@@ -16,7 +16,10 @@ function makeId(): string {
 }
 
 function normalizeLine(raw: string): string {
-  return raw.replace(/\r$/, '').trimEnd();
+  // Strip ALL non-printable control characters (carriage returns, null bytes,
+  // EOF markers, BOM, etc.) that SEL relay exports may contain.
+  // Keep only printable ASCII + extended Unicode, tabs, and spaces.
+  return raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\r\xEF\xBB\xBF]/g, '').trimEnd();
 }
 
 // ─── Line classifier ──────────────────────────────────────────────────────────
