@@ -3,6 +3,7 @@ import type { ImportedSettingsDocument, ImportedSetting } from '../importer/type
 import { parseExpression } from '../parser/parser';
 import type { AnyASTNode } from '../parser/types';
 import type { IRGraph, IRNode, IREdge, IRNodeKind, OutputClass } from './types';
+import { computeDisabledNodes, isDisabledByPatterns } from '../importer/enableMap';
 
 // Well-known SEL output coil names — both QuickSet and .txt export naming
 const OUTPUT_NAMES = new Set([
@@ -68,6 +69,9 @@ export function buildIR(doc: ImportedSettingsDocument): IRGraph {
   const numericSettingNames: string[] = [];
   const elementSettingNames: string[] = [];
   const globalSettingNames: string[] = [];
+
+  // Compute disabled nodes from enable flags and dead equations
+  const { disabled: disabledNodes, disabledPatterns } = computeDisabledNodes(doc.settings);
 
   function ensureNode(id: string, kind?: IRNodeKind): IRNode {
     if (!nodes.has(id)) {
@@ -173,6 +177,9 @@ export function buildIR(doc: ImportedSettingsDocument): IRGraph {
   for (const setting of doc.settings) {
     const { name, value, category } = setting;
 
+    // Skip disabled settings entirely — don't create nodes for them
+    if (disabledNodes.has(name)) continue;
+
     // Track by category
     if (category === 'element') {
       elementSettingNames.push(name);
@@ -256,11 +263,65 @@ export function buildIR(doc: ImportedSettingsDocument): IRGraph {
     }
   }
 
+  // Post-build: prune disabled input nodes and their connected edges/gate nodes.
+  // A disabled input might have been created by ensureNode() when referenced in
+  // another equation. Check both the explicit disabled set AND pattern-match
+  // against disabled enable rules (covers word bits like 51Q1T that aren't
+  // settings themselves but are referenced as identifiers in logic equations).
+  for (const [id, node] of nodes) {
+    if (node.kind === 'input' || node.kind === 'numeric') {
+      if (disabledNodes.has(id) || isDisabledByPatterns(id, disabledPatterns)) {
+        nodes.delete(id);
+      }
+    }
+  }
+
+  // Remove edges referencing deleted nodes
+  const prunedEdges = edges.filter(e => nodes.has(e.source) && nodes.has(e.target));
+
+  // Cascade-prune gate nodes (AND, OR, NOT, etc.) that have zero remaining inputs
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [id, node] of nodes) {
+      if (['and', 'or', 'not', 'rising', 'falling', 'timer', 'latch', 'pulse', 'function'].includes(node.kind)) {
+        const hasInputs = prunedEdges.some(e => e.target === id);
+        if (!hasInputs) {
+          // Remove this gate and its outgoing edges
+          nodes.delete(id);
+          // Remove outgoing edges
+          for (let i = prunedEdges.length - 1; i >= 0; i--) {
+            if (prunedEdges[i].source === id || prunedEdges[i].target === id) {
+              prunedEdges.splice(i, 1);
+            }
+          }
+          changed = true;
+        }
+      }
+    }
+  }
+
+  // Also prune output/derived nodes that now have zero input edges and
+  // whose only definition was a logic equation referencing disabled nodes
+  for (const [id, node] of nodes) {
+    if ((node.kind === 'output' || node.kind === 'derived') && disabledNodes.has(id)) {
+      const hasInputs = prunedEdges.some(e => e.target === id);
+      if (!hasInputs) {
+        nodes.delete(id);
+        for (let i = prunedEdges.length - 1; i >= 0; i--) {
+          if (prunedEdges[i].source === id || prunedEdges[i].target === id) {
+            prunedEdges.splice(i, 1);
+          }
+        }
+      }
+    }
+  }
+
   // Find undefined idents
   const undefinedIdents: string[] = [];
 
   return {
-    nodes, edges,
+    nodes, edges: prunedEdges,
     logicSettingNames, numericSettingNames,
     elementSettingNames, globalSettingNames,
     undefinedIdents,

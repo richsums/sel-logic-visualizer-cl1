@@ -29,6 +29,39 @@
   font-size: 0.85em;
 }
 
+/* ─── Mode toggle ────────────────────────────────────────────────────── */
+
+.modeToggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--c-border);
+  border-radius: 5px;
+  overflow: hidden;
+  align-self: flex-start;
+}
+
+.modeBtn {
+  background: var(--c-surface-2);
+  border: none;
+  border-right: 1px solid var(--c-border);
+  color: var(--c-text-muted);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.modeBtn:last-child { border-right: none; }
+.modeBtn:hover { background: var(--c-surface-3); color: var(--c-text-primary); }
+
+.modeBtnActive {
+  background: rgba(59,130,246,0.15) !important;
+  color: var(--c-accent) !important;
+  font-weight: 600;
+}
+
+/* ─── Document label ─────────────────────────────────────────────────── */
+
 .row {
   display: flex;
   flex-direction: column;
@@ -53,6 +86,117 @@
   outline: none;
 }
 .input:focus { border-color: var(--c-accent); }
+
+/* ─── Three-file slots ───────────────────────────────────────────────── */
+
+.slotsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.fileSlot {
+  background: var(--c-surface-2);
+  border: 1.5px dashed var(--c-border);
+  border-radius: 6px;
+  padding: 0.7rem 0.9rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.fileSlot:hover {
+  border-color: var(--c-accent);
+}
+
+.fileSlotLoaded {
+  border-style: solid;
+  border-color: rgba(74,222,128,0.4);
+  background: rgba(74,222,128,0.04);
+}
+
+.slotHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+
+.slotLabel {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--c-text-primary);
+}
+
+.slotHint {
+  font-size: 0.7rem;
+  font-family: monospace;
+  color: var(--c-accent);
+  opacity: 0.7;
+}
+
+.slotDesc {
+  font-size: 0.72rem;
+  color: var(--c-text-muted);
+  margin: 0 0 0.4rem;
+  line-height: 1.4;
+}
+
+.slotActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.slotUploadBtn {
+  background: var(--c-surface-3);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  color: var(--c-accent);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.slotUploadBtn:hover { background: var(--c-surface-2); border-color: var(--c-accent); }
+
+.slotDragHint {
+  font-size: 0.7rem;
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+
+.slotLoaded {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.slotFileName {
+  font-size: 0.78rem;
+  font-family: monospace;
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.slotLines {
+  font-size: 0.7rem;
+  color: var(--c-text-muted);
+  font-family: monospace;
+}
+
+.slotClear {
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  color: var(--c-text-muted);
+  padding: 0.15rem 0.5rem;
+  font-size: 0.68rem;
+  font-family: inherit;
+  cursor: pointer;
+  margin-left: auto;
+}
+.slotClear:hover { color: #f87171; border-color: #f87171; }
+
+/* ─── Single-file mode ───────────────────────────────────────────────── */
 
 .examplesRow {
   display: flex;
@@ -94,6 +238,8 @@
   white-space: pre;
 }
 .textarea:focus { border-color: var(--c-accent); }
+
+/* ─── Footer ─────────────────────────────────────────────────────────── */
 
 .footer {
   display: flex;
@@ -139,3 +285,11 @@
 }
 .visualizeBtn:hover { background: var(--c-accent-hover); }
 .visualizeBtn:disabled { opacity: 0.4; cursor: default; }
+
+/* ─── Mobile ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .panel { padding: 1rem; }
+  .modeToggle { align-self: stretch; }
+  .modeBtn { flex: 1; text-align: center; }
+}

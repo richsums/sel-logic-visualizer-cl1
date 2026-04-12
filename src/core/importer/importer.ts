@@ -121,3 +121,67 @@ export function importSettings(
 
   return { id: makeId(), label, rawText, lines, settings, diagnostics };
 }
+
+// ─── Multi-file merge importer ──────────────────────────────────────────────
+// Merges three SEL settings files (Set_1, Set_L1, Set_G) into a single doc.
+
+export function importAndMerge(
+  files: { text: string; fileLabel: string }[],
+  label = 'Merged Settings'
+): ImportedSettingsDocument {
+  const allSettings: ImportedSetting[] = [];
+  const allLines: RawLine[] = [];
+  const allDiagnostics: ParseDiagnostic[] = [];
+  const allRawParts: string[] = [];
+  const seen = new Set<string>();
+  let lineOffset = 0;
+
+  for (const { text, fileLabel } of files) {
+    if (!text.trim()) continue;
+    const rawLines = text.split('\n');
+    allRawParts.push(`# --- ${fileLabel} ---\n${text}`);
+
+    const lines: RawLine[] = rawLines.map((raw, index) => {
+      const normalised = normalizeLine(raw);
+      const kind = classifyLine(normalised);
+      return { index: index + lineOffset, raw: normalised, kind };
+    });
+
+    for (const line of lines) {
+      allLines.push(line);
+      if (line.kind !== 'setting') continue;
+      const extracted = extractSetting(line.raw);
+      if (!extracted) {
+        allDiagnostics.push({
+          severity: 'warning',
+          message: `[${fileLabel}] Could not extract name/value from setting line`,
+          lineIndex: line.index,
+          rawText: line.raw,
+        });
+        continue;
+      }
+      if (seen.has(extracted.name)) continue;
+      seen.add(extracted.name);
+      const category = classifySetting(extracted.name, extracted.value);
+      allSettings.push({ name: extracted.name, value: extracted.value, category, rawLine: line });
+    }
+
+    lineOffset += rawLines.length;
+  }
+
+  if (allSettings.length === 0) {
+    allDiagnostics.push({
+      severity: 'info',
+      message: 'No settings parsed from any of the uploaded files.',
+    });
+  }
+
+  return {
+    id: makeId(),
+    label,
+    rawText: allRawParts.join('\n'),
+    lines: allLines,
+    settings: allSettings,
+    diagnostics: allDiagnostics,
+  };
+}

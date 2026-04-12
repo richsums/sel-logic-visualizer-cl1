@@ -40,16 +40,20 @@ E50G = Y
 51G1P = 0.50
 51G1C = U2
 51G1TD = 2.00
-; Negative Sequence
+; Negative Sequence (disabled)
+E51Q = N
 50Q1P = 1.50
 51Q1P = 0.75
 51Q1TD = 2.50
 ; Undervoltage / Overvoltage
+E27P = Y
 27P1P = 0.80
 27P1D = 2.00
+E59P = Y
 59P1P = 1.20
 59P1D = 1.00
-; Frequency
+; Frequency (disabled)
+E81D = N
 81D1TP = 57.00
 81D1TD = 0.10
 81D2TP = 59.50
