@@ -8,6 +8,7 @@ import { DiagnosticsPanel } from './components/DiagnosticsPanel/DiagnosticsPanel
 import { ComparisonView } from './components/ComparisonView/ComparisonView';
 import { TutorialPanel } from './components/TutorialPanel/TutorialPanel';
 import { ExportPanel } from './components/ExportPanel/ExportPanel';
+import { TestPlanPanel } from './components/TestPlanPanel/TestPlanPanel';
 import { SettingsTable } from './components/SettingsTable/SettingsTable';
 import styles from './App.module.css';
 
@@ -24,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'simulation',  label: 'Simulation',  short: 'SIM' },
   { id: 'settings',    label: 'Settings',    short: 'SET' },
   { id: 'diagnostics', label: 'Diagnostics', short: 'DGN' },
+  { id: 'testplan',    label: 'Test Plan',   short: 'TST' },
   { id: 'comparison',  label: 'Compare',     short: 'CMP' },
   { id: 'export',      label: 'Export',      short: 'EXP' },
   { id: 'tutorial',    label: 'Help',        short: 'HLP' },
@@ -37,6 +39,7 @@ function PanelContent({ panel }: { panel: AppPanel }) {
     case 'simulation':  return <SimulationPanel />;
     case 'settings':    return <SettingsTable />;
     case 'diagnostics': return <DiagnosticsPanel />;
+    case 'testplan':    return <TestPlanPanel />;
     case 'comparison':  return <ComparisonView />;
     case 'export':      return <ExportPanel />;
     case 'tutorial':    return <TutorialPanel />;

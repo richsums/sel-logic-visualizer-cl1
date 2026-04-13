@@ -16,7 +16,8 @@ export type AppPanel =
   | 'export'
   | 'simulation'
   | 'comparison'
-  | 'tutorial';
+  | 'tutorial'
+  | 'testplan';
 
 export type SimViewMode = 'compact' | 'expanded';
 export type ColorMode = 'dark' | 'light';
