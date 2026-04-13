@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
+import { useAppStore } from '../../store/appStore';
 import type { IRNodeKind, OutputClass } from '../../core/ir/types';
 import type { TimerInfo } from '../../core/simulation/engine';
 
@@ -22,7 +23,9 @@ interface SelNodeData {
 
 // ─── Color scheme per kind ────────────────────────────────────────────────────
 
-const KIND_COLORS: Record<IRNodeKind, { fill: string; stroke: string; text: string }> = {
+type ColorSet = Record<IRNodeKind, { fill: string; stroke: string; text: string }>;
+
+const KIND_COLORS_DARK: ColorSet = {
   input:    { fill: '#1e2d45', stroke: '#4a7eb5', text: '#90b4e8' },
   output:   { fill: '#3a1a28', stroke: '#c0426a', text: '#f0a0c0' },
   derived:  { fill: '#1a2e24', stroke: '#3d8a5e', text: '#7ecaaa' },
@@ -38,11 +41,40 @@ const KIND_COLORS: Record<IRNodeKind, { fill: string; stroke: string; text: stri
   numeric:  { fill: '#202020', stroke: '#484848', text: '#808080' },
 };
 
-function getColors(kind: IRNodeKind, active: boolean, selected: boolean, highlighted: boolean) {
-  const base = KIND_COLORS[kind] ?? KIND_COLORS.function;
-  if (active) return { fill: '#0f2a0f', stroke: '#4ade80', text: '#4ade80' };
-  if (selected) return { fill: base.fill, stroke: '#facc15', text: '#facc15' };
-  if (highlighted) return { fill: base.fill, stroke: '#60a5fa', text: base.text };
+const KIND_COLORS_LIGHT: ColorSet = {
+  input:    { fill: '#dbeafe', stroke: '#2563eb', text: '#1e40af' },
+  output:   { fill: '#fce7f3', stroke: '#db2777', text: '#9d174d' },
+  derived:  { fill: '#dcfce7', stroke: '#16a34a', text: '#166534' },
+  and:      { fill: '#ede9fe', stroke: '#7c3aed', text: '#5b21b6' },
+  or:       { fill: '#dbeafe', stroke: '#3b82f6', text: '#1e3a8a' },
+  not:      { fill: '#ffedd5', stroke: '#ea580c', text: '#9a3412' },
+  rising:   { fill: '#dcfce7', stroke: '#22c55e', text: '#166534' },
+  falling:  { fill: '#fef9c3', stroke: '#ca8a04', text: '#854d0e' },
+  timer:    { fill: '#f3e8ff', stroke: '#9333ea', text: '#6b21a8' },
+  latch:    { fill: '#ffedd5', stroke: '#ea580c', text: '#9a3412' },
+  pulse:    { fill: '#ccfbf1', stroke: '#0d9488', text: '#115e59' },
+  function: { fill: '#f1f5f9', stroke: '#64748b', text: '#334155' },
+  numeric:  { fill: '#f1f5f9', stroke: '#94a3b8', text: '#64748b' },
+};
+
+function getColors(kind: IRNodeKind, active: boolean, selected: boolean, highlighted: boolean, theme: 'dark' | 'light' = 'dark') {
+  const palette = theme === 'light' ? KIND_COLORS_LIGHT : KIND_COLORS_DARK;
+  const base = palette[kind] ?? palette.function;
+  if (active) {
+    return theme === 'light'
+      ? { fill: '#bbf7d0', stroke: '#16a34a', text: '#166534' }
+      : { fill: '#0f2a0f', stroke: '#4ade80', text: '#4ade80' };
+  }
+  if (selected) {
+    return theme === 'light'
+      ? { fill: base.fill, stroke: '#ca8a04', text: '#854d0e' }
+      : { fill: base.fill, stroke: '#facc15', text: '#facc15' };
+  }
+  if (highlighted) {
+    return theme === 'light'
+      ? { fill: base.fill, stroke: '#3b82f6', text: base.text }
+      : { fill: base.fill, stroke: '#60a5fa', text: base.text };
+  }
   return base;
 }
 
@@ -183,8 +215,6 @@ function AndGateShape({ c }: { c: ReturnType<typeof getColors> }) {
         fill={c.fill} stroke={c.stroke} strokeWidth="2"
       />
       <line x1="68" y1="23" x2="76" y2="23" stroke={c.stroke} strokeWidth="1.5" />
-      <text x="30" y="27" textAnchor="middle" fontSize="13" fontWeight="bold"
-            fontFamily="monospace" fill={c.text}>&amp;</text>
     </svg>
   );
 }
@@ -199,8 +229,6 @@ function OrGateShape({ c }: { c: ReturnType<typeof getColors> }) {
         fill={c.fill} stroke={c.stroke} strokeWidth="2"
       />
       <line x1="56" y1="23" x2="76" y2="23" stroke={c.stroke} strokeWidth="1.5" />
-      <text x="28" y="27" textAnchor="middle" fontSize="11" fontWeight="bold"
-            fontFamily="monospace" fill={c.text}>≥1</text>
     </svg>
   );
 }
@@ -406,7 +434,8 @@ function NodeWrapper({
   data: SelNodeData;
   children: React.ReactNode;
 }) {
-  const c = getColors(data.kind, data.active, data.selected, data.highlighted);
+  const colorMode = useAppStore((s) => s.colorMode);
+  const c = getColors(data.kind, data.active, data.selected, data.highlighted, colorMode);
   const handleStyle = { background: c.stroke, width: 8, height: 8, border: `2px solid ${c.stroke}` };
 
   // Glow effects
@@ -470,7 +499,8 @@ function NodeWrapper({
 // ─── Main exported node ───────────────────────────────────────────────────────
 
 export const SelNode = memo(({ data }: { data: SelNodeData }) => {
-  const c = getColors(data.kind, data.active, data.selected, data.highlighted);
+  const colorMode = useAppStore((s) => s.colorMode);
+  const c = getColors(data.kind, data.active, data.selected, data.highlighted, colorMode);
 
   // AND gate
   if (data.kind === 'and') {

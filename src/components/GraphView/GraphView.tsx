@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -7,63 +7,161 @@ import {
   useNodesState,
   useEdgesState,
   type NodeMouseHandler,
+  type OnNodesChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppStore } from '../../store/appStore';
-import { buildFlowGraph } from './graphTransform';
+import { buildFlowGraph, type FlowNode, type FlowEdge } from './graphTransform';
 import { SelNode } from './SelNode';
+import { NegatedEdge } from './NegatedEdge';
+import { ContextMenu } from './ContextMenu';
 import { traceNode } from '../../core/analysis/engine';
+import { setInput, stepSimulation, resetSimulation, createSimState } from '../../core/simulation/engine';
 import styles from './GraphView.module.css';
 
 const nodeTypes = { selNode: SelNode };
+const edgeTypes = { negatedEdge: NegatedEdge };
 
 export function GraphView() {
   const {
     graph, simState, selectedNodeId, highlightedNodeIds,
-    simFocusedOutputId, simActivePaths,
+    simFocusedOutputId, simActivePaths, hiddenNodeIds, colorMode,
     setSelectedNodeId, setHighlightedNodeIds, setActivePanel,
-    setSimFocusedOutputId,
+    setSimFocusedOutputId, setSimState, setSimActivePaths,
+    hideNode,
   } = useAppStore();
 
-  const { nodes: flowNodes, edges: flowEdges } = useMemo(() => {
+  // Track graph identity for re-layout
+  const prevGraphRef = useRef<typeof graph>(null);
+
+  // Persistent user-dragged positions
+  const dragPositions = useRef(new Map<string, { x: number; y: number }>());
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number; y: number; nodeId: string; nodeLabel: string;
+  } | null>(null);
+
+  // Build the flow graph data
+  const flowData = useMemo(() => {
     if (!graph) return { nodes: [], edges: [] };
     return buildFlowGraph(
       graph, simState, selectedNodeId, highlightedNodeIds,
-      simActivePaths, simFocusedOutputId,
+      simActivePaths, simFocusedOutputId, hiddenNodeIds,
     );
-  }, [graph, simState, selectedNodeId, highlightedNodeIds, simActivePaths, simFocusedOutputId]);
+  }, [graph, simState, selectedNodeId, highlightedNodeIds,
+      simActivePaths, simFocusedOutputId, hiddenNodeIds]);
 
-  const [, , onNodesChange] = useNodesState(flowNodes);
-  const [, , onEdgesChange] = useEdgesState(flowEdges);
+  // Detect graph change → clear drag positions for full re-layout
+  useEffect(() => {
+    if (graph !== prevGraphRef.current) {
+      dragPositions.current.clear();
+      prevGraphRef.current = graph;
+    }
+  }, [graph]);
 
+  // Apply dragged positions over dagre-computed ones
+  const nodesWithDrag = useMemo(() => {
+    return flowData.nodes.map(n => {
+      const dragged = dragPositions.current.get(n.id);
+      return dragged ? { ...n, position: dragged } : n;
+    });
+  }, [flowData.nodes]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(nodesWithDrag);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(flowData.edges);
+
+  // Sync when flow data changes (sim state, etc.) — preserve drag positions
+  useEffect(() => {
+    setNodes(nodesWithDrag);
+    setEdges(flowData.edges);
+  }, [nodesWithDrag, flowData.edges, setNodes, setEdges]);
+
+  // Capture drag position changes
+  const handleNodesChange: OnNodesChange = useCallback((changes) => {
+    onNodesChange(changes);
+    for (const change of changes) {
+      if (change.type === 'position' && change.position) {
+        dragPositions.current.set(change.id, change.position);
+      }
+    }
+  }, [onNodesChange]);
+
+  // ─── Left-click: toggle logical state ───────────────────────────────────
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     if (!graph) return;
 
-    // If simulation is active and this is an output node, toggle causal path focus
-    const irNode = graph.nodes.get(node.id);
-    if (simState && irNode?.kind === 'output') {
-      if (simFocusedOutputId === node.id) {
-        // Click same output again → clear focus
-        setSimFocusedOutputId(null);
-      } else {
-        setSimFocusedOutputId(node.id);
-      }
-      return;
+    // Ensure sim state exists
+    let state = simState;
+    if (!state) {
+      state = createSimState(graph);
     }
 
-    // Normal mode: select + trace + show analysis
+    // Toggle the signal for this node
+    const current = state.signals.get(node.id) ?? false;
+    const toggled = setInput(state, node.id, !current);
+
+    // Propagate
+    const next = stepSimulation(graph, toggled);
+    setSimState(next);
+    setSimActivePaths(next.activePaths);
+
+    // Highlight the selected node
     setSelectedNodeId(node.id);
     const trace = traceNode(graph, node.id);
     const highlighted = new Set([...trace.upstream, node.id, ...trace.downstream]);
     setHighlightedNodeIds(highlighted);
-    setActivePanel('analysis');
-  }, [graph, simState, simFocusedOutputId, setSelectedNodeId, setHighlightedNodeIds, setActivePanel, setSimFocusedOutputId]);
+  }, [graph, simState, setSimState, setSimActivePaths, setSelectedNodeId, setHighlightedNodeIds]);
 
+  // ─── Right-click: context menu ──────────────────────────────────────────
+  const onNodeContextMenu: NodeMouseHandler = useCallback((event, node) => {
+    event.preventDefault();
+    const irNode = graph?.nodes.get(node.id);
+    setContextMenu({
+      x: (event as unknown as MouseEvent).clientX,
+      y: (event as unknown as MouseEvent).clientY,
+      nodeId: node.id,
+      nodeLabel: irNode?.label ?? node.id,
+    });
+  }, [graph]);
+
+  const handleRemoveFromView = useCallback(() => {
+    if (contextMenu) {
+      hideNode(contextMenu.nodeId);
+      setContextMenu(null);
+    }
+  }, [contextMenu, hideNode]);
+
+  const handleElementBreakdown = useCallback(() => {
+    if (contextMenu) {
+      setSelectedNodeId(contextMenu.nodeId);
+      if (graph) {
+        const trace = traceNode(graph, contextMenu.nodeId);
+        setHighlightedNodeIds(new Set([...trace.upstream, contextMenu.nodeId, ...trace.downstream]));
+      }
+      setActivePanel('analysis');
+      setContextMenu(null);
+    }
+  }, [contextMenu, graph, setSelectedNodeId, setHighlightedNodeIds, setActivePanel]);
+
+  // ─── Pane click: clear selection ────────────────────────────────────────
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
     setHighlightedNodeIds(new Set());
     setSimFocusedOutputId(null);
+    setContextMenu(null);
   }, [setSelectedNodeId, setHighlightedNodeIds, setSimFocusedOutputId]);
+
+  // ─── Reset states ──────────────────────────────────────────────────────
+  const handleResetStates = useCallback(() => {
+    if (!graph) return;
+    const fresh = resetSimulation(graph);
+    setSimState(fresh);
+    setSimActivePaths([]);
+    setSimFocusedOutputId(null);
+    setSelectedNodeId(null);
+    setHighlightedNodeIds(new Set());
+  }, [graph, setSimState, setSimActivePaths, setSimFocusedOutputId, setSelectedNodeId, setHighlightedNodeIds]);
 
   if (!graph) {
     return (
@@ -76,20 +174,22 @@ export function GraphView() {
   return (
     <div className={styles.container}>
       <ReactFlow
-        nodes={flowNodes}
-        edges={flowEdges}
-        onNodesChange={onNodesChange}
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onNodeContextMenu={onNodeContextMenu}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         minZoom={0.1}
         maxZoom={3}
-        colorMode="dark"
+        colorMode={colorMode}
       >
-        <Background color="#2d3748" gap={20} />
+        <Background color={colorMode === 'dark' ? '#2d3748' : '#e2e8f0'} gap={20} />
         <Controls />
         <MiniMap
           nodeColor={(n) => {
@@ -99,9 +199,18 @@ export function GraphView() {
             if ((n.data as { active: boolean }).active) return '#4ade80';
             return '#4a5568';
           }}
-          style={{ background: '#1a202c' }}
+          style={{ background: colorMode === 'dark' ? '#1a202c' : '#f7fafc' }}
         />
       </ReactFlow>
+
+      {/* Graph toolbar */}
+      <div className={styles.graphToolbar}>
+        <button className={styles.toolbarBtn} onClick={handleResetStates} title="Reset all toggled states to default">
+          Reset States
+        </button>
+      </div>
+
+      {/* Focus banner */}
       {simFocusedOutputId && (
         <div className={styles.focusBanner}>
           Tracing: <strong>{simFocusedOutputId}</strong>
@@ -117,6 +226,21 @@ export function GraphView() {
           </button>
         </div>
       )}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          nodeId={contextMenu.nodeId}
+          nodeLabel={contextMenu.nodeLabel}
+          onRemoveFromView={handleRemoveFromView}
+          onElementBreakdown={handleElementBreakdown}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Legend */}
       <div className={styles.legend}>
         {[
           { kind: 'input', label: 'Input' },
@@ -124,7 +248,6 @@ export function GraphView() {
           { kind: 'derived', label: 'Derived' },
           { kind: 'and', label: 'AND' },
           { kind: 'or', label: 'OR' },
-          { kind: 'not', label: 'NOT' },
           { kind: 'timer', label: 'Timer' },
           { kind: 'latch', label: 'Latch' },
           { kind: 'rising', label: 'R_TRIG' },

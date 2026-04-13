@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore, type AppPanel } from './store/appStore';
 import { ImportPanel } from './components/ImportPanel/ImportPanel';
 import { GraphView } from './components/GraphView/GraphView';
@@ -45,9 +45,14 @@ function PanelContent({ panel }: { panel: AppPanel }) {
 }
 
 export function App() {
-  const { activePanel, setActivePanel, docA, graph, simState, simRunning } = useAppStore();
+  const { activePanel, setActivePanel, docA, graph, simState, simRunning, colorMode, toggleColorMode } = useAppStore();
   const hasDoc = !!docA;
   const isSimActive = !!simState;
+
+  // Sync data-theme to <html> so CSS variables cascade everywhere
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', colorMode);
+  }, [colorMode]);
 
   // Count asserted outputs for the banner
   let assertedOutputs = 0;
@@ -60,7 +65,7 @@ export function App() {
   }
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-theme={colorMode}>
       {/* Simulation mode banner */}
       {isSimActive && (
         <div className={styles.simBanner}>
@@ -87,14 +92,23 @@ export function App() {
           <span className={styles.logoMark}>SEL</span>
           <span className={styles.logoText}>Logic Visualizer</span>
         </div>
-        {hasDoc && (
-          <div className={styles.docInfo}>
-            <span className={styles.docLabel}>{docA!.label}</span>
-            <span className={styles.docMeta}>
-              {docA!.settings.length} settings · {graph?.nodes.size ?? 0} nodes
-            </span>
-          </div>
-        )}
+        <div className={styles.headerRight}>
+          {hasDoc && (
+            <div className={styles.docInfo}>
+              <span className={styles.docLabel}>{docA!.label}</span>
+              <span className={styles.docMeta}>
+                {docA!.settings.length} settings · {graph?.nodes.size ?? 0} nodes
+              </span>
+            </div>
+          )}
+          <button
+            className={styles.themeToggle}
+            onClick={toggleColorMode}
+            title={colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {colorMode === 'dark' ? '\u2600' : '\u263E'}
+          </button>
+        </div>
       </header>
 
       <div className={styles.body}>

@@ -1,4 +1,4 @@
-/* ─── Global tokens ──────────────────────────────────────────────────────── */
+/* ─── Global tokens (dark mode – default) ────────────────────────────────── */
 :root {
   --c-bg:            #0f1117;
   --c-surface-1:     #141820;
@@ -12,6 +12,22 @@
   --c-text-muted:    #64748b;
   --c-nav-bg:        #0f1117;
   --c-nav-border:    #1e2a3a;
+}
+
+/* ─── Light mode overrides ───────────────────────────────────────────────── */
+[data-theme="light"] {
+  --c-bg:            #f8fafc;
+  --c-surface-1:     #ffffff;
+  --c-surface-2:     #f1f5f9;
+  --c-surface-3:     #e2e8f0;
+  --c-border:        #cbd5e1;
+  --c-accent:        #2563eb;
+  --c-accent-hover:  #1d4ed8;
+  --c-text-primary:  #1e293b;
+  --c-text-secondary:#475569;
+  --c-text-muted:    #94a3b8;
+  --c-nav-bg:        #ffffff;
+  --c-nav-border:    #e2e8f0;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -30,8 +46,12 @@ html, body, #root {
 /* Scrollbars */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4a5568; }
+::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-text-muted); }
+
+/* Light mode scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* React Flow overrides */
 .react-flow__attribution { display: none !important; }

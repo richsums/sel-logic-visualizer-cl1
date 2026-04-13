@@ -13,6 +13,103 @@
   font-size: 0.9rem;
 }
 
+/* ─── Graph toolbar ─────────────────────────────────────────────────── */
+
+.graphToolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 15;
+}
+
+.toolbarBtn {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 5px;
+  color: var(--c-text-primary);
+  padding: 5px 12px;
+  font-size: 0.76rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.12s, border-color 0.12s;
+}
+.toolbarBtn:hover {
+  background: var(--c-surface-3);
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+/* ─── Context menu ──────────────────────────────────────────────────── */
+
+.contextMenu {
+  position: fixed;
+  z-index: 100;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  min-width: 170px;
+  padding: 4px 0;
+  backdrop-filter: blur(8px);
+}
+
+.contextMenuTitle {
+  padding: 6px 12px 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--c-accent);
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: 2px;
+}
+
+.contextMenuItem, .contextMenuItemDanger {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  background: none;
+  border: none;
+  color: var(--c-text-primary);
+  font-size: 0.78rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.contextMenuItem:hover {
+  background: rgba(59,130,246,0.12);
+  color: var(--c-accent);
+}
+.contextMenuItemDanger:hover {
+  background: rgba(239,68,68,0.12);
+  color: #ef4444;
+}
+
+/* ─── Focus banner ──────────────────────────────────────────────────── */
+
+.focusBanner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #22c55e;
+  border-radius: 6px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #4ade80;
+  z-index: 20;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+/* ─── Legend ─────────────────────────────────────────────────────────── */
+
 .legend {
   position: absolute;
   bottom: 12px;
@@ -38,26 +135,8 @@
 .legendItem[data-kind="derived"] { background: #2d4a3e; border-color: #4a8e6e; color: #7ecaaa; }
 .legendItem[data-kind="and"]     { background: #3d3a5e; border-color: #6d6a9e; color: #aaa8e8; }
 .legendItem[data-kind="or"]      { background: #3a4a5e; border-color: #6a7a9e; color: #a0b8e8; }
-.legendItem[data-kind="not"]     { background: #5e3a2d; border-color: #9e6a4a; color: #e8b090; }
 .legendItem[data-kind="timer"]   { background: #4e3d5e; border-color: #8e6d9e; color: #c8a8e8; }
 .legendItem[data-kind="latch"]   { background: #5e4a2d; border-color: #9e7a4a; color: #e8c090; }
 .legendItem[data-kind="rising"]  { background: #2d4a2d; border-color: #4a8e4a; color: #90e090; }
 .legendItem[data-kind="falling"] { background: #4a4a2d; border-color: #8e8e4a; color: #e0d870; }
 .legendItem[data-kind="pulse"]   { background: #2d4a4a; border-color: #4a8e8e; color: #70e0e0; }
-
-.focusBanner {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid #22c55e;
-  border-radius: 6px;
-  padding: 4px 14px;
-  font-size: 12px;
-  font-family: monospace;
-  color: #4ade80;
-  z-index: 20;
-  backdrop-filter: blur(4px);
-  white-space: nowrap;
-}

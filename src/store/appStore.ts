@@ -19,6 +19,7 @@ export type AppPanel =
   | 'tutorial';
 
 export type SimViewMode = 'compact' | 'expanded';
+export type ColorMode = 'dark' | 'light';
 
 interface AppState {
   // Documents
@@ -42,6 +43,8 @@ interface AppState {
   activePanel: AppPanel;
   selectedNodeId: string | null;
   highlightedNodeIds: Set<string>;
+  hiddenNodeIds: Set<string>;
+  colorMode: ColorMode;
 
   // Actions
   setDocA: (doc: ImportedSettingsDocument) => void;
@@ -58,6 +61,9 @@ interface AppState {
   setActivePanel: (p: AppPanel) => void;
   setSelectedNodeId: (id: string | null) => void;
   setHighlightedNodeIds: (ids: Set<string>) => void;
+  hideNode: (id: string) => void;
+  clearHiddenNodes: () => void;
+  toggleColorMode: () => void;
   reset: () => void;
 }
 
@@ -76,6 +82,8 @@ export const useAppStore = create<AppState>((set) => ({
   activePanel: 'import',
   selectedNodeId: null,
   highlightedNodeIds: new Set(),
+  hiddenNodeIds: new Set(),
+  colorMode: 'dark',
 
   setDocA: (docA) => set({ docA }),
   setDocB: (docB) => set({ docB }),
@@ -91,6 +99,15 @@ export const useAppStore = create<AppState>((set) => ({
   setActivePanel: (activePanel) => set({ activePanel }),
   setSelectedNodeId: (selectedNodeId) => set({ selectedNodeId }),
   setHighlightedNodeIds: (highlightedNodeIds) => set({ highlightedNodeIds }),
+  hideNode: (id) => set((state) => {
+    const next = new Set(state.hiddenNodeIds);
+    next.add(id);
+    return { hiddenNodeIds: next };
+  }),
+  clearHiddenNodes: () => set({ hiddenNodeIds: new Set() }),
+  toggleColorMode: () => set((state) => ({
+    colorMode: state.colorMode === 'dark' ? 'light' : 'dark',
+  })),
   reset: () => set({
     docA: null, docB: null, graph: null, analysisReport: null,
     comparisonResult: null, simState: null, simRunning: false,

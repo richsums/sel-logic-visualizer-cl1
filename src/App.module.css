@@ -43,10 +43,36 @@
   letter-spacing: 0.01em;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .docInfo {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.themeToggle {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 5px;
+  color: var(--c-text-secondary);
+  font-size: 1rem;
+  width: 32px;
+  height: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.themeToggle:hover {
+  background: var(--c-surface-3);
+  border-color: var(--c-accent);
+  color: var(--c-accent);
 }
 
 .docLabel {
