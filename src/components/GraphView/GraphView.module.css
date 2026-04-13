@@ -80,13 +80,32 @@
   text-align: left;
   cursor: pointer;
 }
-.contextMenuItem:hover {
+.contextMenuItem:hover, .contextMenuItem:active {
   background: rgba(59,130,246,0.12);
   color: var(--c-accent);
 }
-.contextMenuItemDanger:hover {
+.contextMenuItemDanger:hover, .contextMenuItemDanger:active {
   background: rgba(239,68,68,0.12);
   color: #ef4444;
+}
+
+/* Mobile-friendly: larger touch targets */
+@media (pointer: coarse) {
+  .contextMenuItem, .contextMenuItemDanger {
+    padding: 12px 16px;
+    font-size: 0.88rem;
+  }
+  .contextMenuTitle {
+    padding: 10px 16px 8px;
+    font-size: 0.82rem;
+  }
+  .contextMenu {
+    min-width: 200px;
+  }
+  .toolbarBtn {
+    padding: 8px 16px;
+    font-size: 0.84rem;
+  }
 }
 
 /* ─── Focus banner ──────────────────────────────────────────────────── */

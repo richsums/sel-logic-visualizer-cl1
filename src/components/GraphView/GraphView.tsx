@@ -15,6 +15,7 @@ import { buildFlowGraph, type FlowNode, type FlowEdge } from './graphTransform';
 import { SelNode } from './SelNode';
 import { NegatedEdge } from './NegatedEdge';
 import { ContextMenu } from './ContextMenu';
+import { useLongPress } from './useLongPress';
 import { traceNode } from '../../core/analysis/engine';
 import { setInput, stepSimulation, resetSimulation, createSimState } from '../../core/simulation/engine';
 import styles from './GraphView.module.css';
@@ -41,6 +42,34 @@ export function GraphView() {
   const [contextMenu, setContextMenu] = useState<{
     x: number; y: number; nodeId: string; nodeLabel: string;
   } | null>(null);
+
+  // ─── Long-press for mobile context menu ────────────────────────────────
+  const handleLongPress = useCallback((x: number, y: number, target: HTMLElement) => {
+    // Walk up DOM to find the React Flow node wrapper with data-id
+    let el: HTMLElement | null = target;
+    while (el && !el.getAttribute('data-id')) {
+      el = el.parentElement;
+    }
+    if (!el) return;
+    const nodeId = el.getAttribute('data-id');
+    if (!nodeId || !graph) return;
+
+    // Haptic feedback on mobile if available
+    if (navigator.vibrate) navigator.vibrate(30);
+
+    const irNode = graph.nodes.get(nodeId);
+    setContextMenu({
+      x,
+      y,
+      nodeId,
+      nodeLabel: irNode?.label ?? nodeId,
+    });
+  }, [graph]);
+
+  const { onTouchStart, onTouchMove, onTouchEnd, didLongPress } = useLongPress({
+    delay: 500,
+    onLongPress: handleLongPress,
+  });
 
   // Build the flow graph data
   const flowData = useMemo(() => {
@@ -87,8 +116,13 @@ export function GraphView() {
     }
   }, [onNodesChange]);
 
-  // ─── Left-click: toggle logical state ───────────────────────────────────
+  // ─── Left-click / tap: toggle logical state ─────────────────────────────
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
+    // Suppress tap if it was actually a long-press (mobile context menu)
+    if (didLongPress.current) {
+      didLongPress.current = false;
+      return;
+    }
     if (!graph) return;
 
     // Ensure sim state exists
@@ -172,7 +206,12 @@ export function GraphView() {
   }
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
