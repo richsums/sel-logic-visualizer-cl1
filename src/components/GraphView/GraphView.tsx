@@ -7,7 +7,7 @@ import {
   useNodesState,
   useEdgesState,
   type NodeMouseHandler,
-  type OnNodesChange,
+  type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppStore } from '../../store/appStore';
@@ -78,7 +78,7 @@ export function GraphView() {
   }, [nodesWithDrag, flowData.edges, setNodes, setEdges]);
 
   // Capture drag position changes
-  const handleNodesChange: OnNodesChange = useCallback((changes) => {
+  const handleNodesChange = useCallback((changes: NodeChange<FlowNode>[]) => {
     onNodesChange(changes);
     for (const change of changes) {
       if (change.type === 'position' && change.position) {
