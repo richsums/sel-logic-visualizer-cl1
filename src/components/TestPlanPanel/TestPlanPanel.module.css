@@ -396,9 +396,342 @@
   font-size: 0.7rem;
 }
 
+/* ─── Popup overlay ───────────────────────────────────── */
+.popupOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.popupContent {
+  background: var(--c-surface-1);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.18s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.popupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.popupClose {
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: background 0.12s, color 0.12s;
+}
+.popupClose:hover {
+  background: var(--c-surface-3);
+  color: var(--c-text-primary);
+}
+
+.popupBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.85rem 1rem;
+}
+
+.popupFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0.65rem 1rem;
+  border-top: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.popupSection {
+  margin-bottom: 1rem;
+}
+.popupSection:last-child { margin-bottom: 0; }
+
+.popupSectionTitle {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--c-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+
+.popupInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.3rem 0;
+}
+
+.popupHint {
+  font-size: 0.68rem;
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+
+/* ─── Intermediate detail cards ──────────────────────── */
+.intermediateCard {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.intermediateHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.4rem;
+}
+
+.intermediateName {
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--c-text-primary);
+}
+
+.intermediateRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 0.76rem;
+}
+
+.intermediateLabel {
+  color: var(--c-text-muted);
+  font-weight: 600;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+}
+
+.intermediateValue {
+  color: var(--c-text-secondary);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.intermediateValueHighlight {
+  color: #4ade80;
+  font-family: monospace;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+/* ─── Timer / Latch badges ───────────────────────────── */
+.timerBadge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  text-transform: uppercase;
+}
+
+.latchBadge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  text-transform: uppercase;
+}
+
+/* ─── Omicron module badges ──────────────────────────── */
+.badgeModule {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badgeModuleAlt {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+/* ─── Detail sections ────────────────────────────────── */
+.detailSection {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--c-border);
+}
+
+.detailSectionTitle {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--c-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+/* ─── Path header with badges ────────────────────────── */
+.pathHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.graphLink {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--c-accent);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 3px;
+  padding: 1px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+.graphLink:hover {
+  background: var(--c-accent);
+  color: #fff;
+}
+
+/* ─── Intermediate chips inline ──────────────────────── */
+.pathIntermediates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.intermediateChip {
+  font-size: 0.66rem;
+  font-family: monospace;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  color: #c4b5fd;
+}
+
+/* ─── Pass criteria preview ──────────────────────────── */
+.passCriteriaPreview {
+  margin-top: 6px;
+  padding: 4px 0;
+}
+
+.criterionPreview {
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.criterionMeasure {
+  font-weight: 700;
+  color: var(--c-text-secondary);
+}
+
+.criterionExpected {
+  color: #4ade80;
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.criterionTolerance {
+  color: var(--c-text-muted);
+  font-size: 0.64rem;
+}
+
+.criterionMore {
+  font-size: 0.66rem;
+  color: var(--c-text-muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* ─── Criterion card (popup full view) ───────────────── */
+.criterionCard {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.4rem;
+}
+
+.criterionMeasureFull {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  margin-bottom: 4px;
+}
+
+.criterionRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 0;
+  font-size: 0.74rem;
+}
+
 /* ─── Mobile ───────────────────────────────────────────── */
 @media (pointer: coarse) {
   .tab { padding: 0.65rem 1rem; font-size: 0.82rem; }
   .pathCheckbox { width: 20px; height: 20px; }
   .btn { padding: 0.5rem 1rem; font-size: 0.84rem; }
+  .popupContent { max-width: 100%; max-height: 90vh; border-radius: 8px; }
+  .graphLink { padding: 4px 10px; font-size: 0.72rem; }
+  .intermediateCard { padding: 0.5rem 0.6rem; }
 }
