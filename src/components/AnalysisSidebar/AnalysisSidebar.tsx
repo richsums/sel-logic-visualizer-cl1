@@ -1,7 +1,24 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { traceNode, findPaths, detectCycles, detectUnused } from '../../core/analysis/engine';
 import styles from './AnalysisSidebar.module.css';
+
+/** Categorize a word bit for display */
+function describeWordBit(id: string): string {
+  const u = id.toUpperCase();
+  if (/^\d{2}[A-Z]+\d*T$/.test(u)) return 'timer-delayed pickup';
+  if (/^SV\d+T$/.test(u)) return 'SV timer output (PU=0 → immediate)';
+  if (/^SV\d+$/.test(u)) return 'SELOGIC variable';
+  if (/^PSV\d+$/.test(u)) return 'protected SV variable';
+  if (/^PCT\d+T$/.test(u)) return 'PCT timed output';
+  if (/^PCT\d+$/.test(u)) return 'PCT timer input active';
+  if (/^PLT\d+$/.test(u)) return 'programmable latch';
+  if (/^LT\d+$/.test(u)) return 'latch bit';
+  if (/^IN\d+$/.test(u)) return 'physical relay input';
+  if (/^52[AB]$/.test(u)) return 'breaker status contact';
+  if (/^\d{2}[A-Z]+\d*$/.test(u)) return 'element pickup flag';
+  return 'relay word bit';
+}
 
 export function AnalysisSidebar() {
   const { graph, docA, selectedNodeId, analysisReport } = useAppStore();
@@ -13,6 +30,21 @@ export function AnalysisSidebar() {
   const selectedNode = selectedNodeId ? graph.nodes.get(selectedNodeId) : null;
   const trace = selectedNodeId ? traceNode(graph, selectedNodeId) : null;
   const paths = selectedNodeId ? findPaths(graph, selectedNodeId) : [];
+
+  // Collect word bits: input nodes not in settings (hardware inputs, element pickups, timer bits)
+  const wordBits = useMemo(() => {
+    if (!graph || !docA) return [];
+    const defined = new Set(docA.settings.map(s => s.name));
+    const bits: { id: string; desc: string }[] = [];
+    for (const [id, node] of graph.nodes) {
+      if (node.kind === 'input' && !defined.has(id) && !/^(AND|OR|NOT)_\d+$/.test(id)) {
+        bits.push({ id, desc: describeWordBit(id) });
+      }
+    }
+    // Sort: timer bits first, then SVs, then elements, then inputs
+    bits.sort((a, b) => a.id.localeCompare(b.id));
+    return bits;
+  }, [graph, docA]);
 
   return (
     <div className={styles.panel}>
@@ -96,6 +128,22 @@ export function AnalysisSidebar() {
           {analysisReport.unusedNodes.slice(0, 10).map(id => (
             <div key={id} className={styles.unused}>{id}</div>
           ))}
+        </div>
+      )}
+
+      {/* Word bits referenced */}
+      {wordBits.length > 0 && (
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>Word Bits Referenced ({wordBits.length})</div>
+          <div className={styles.tagList}>
+            {wordBits.slice(0, 40).map(wb => (
+              <span key={wb.id} className={styles.tag} title={wb.desc}>
+                {wb.id}
+                <span style={{ fontSize: '0.6rem', opacity: 0.6, marginLeft: 4 }}>{wb.desc}</span>
+              </span>
+            ))}
+            {wordBits.length > 40 && <span className={styles.more}>+{wordBits.length - 40} more</span>}
+          </div>
         </div>
       )}
 

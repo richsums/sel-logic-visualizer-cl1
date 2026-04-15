@@ -337,13 +337,40 @@ function getSpecificFaultValues(nodeId: string, graph: IRGraph): FaultInjectionV
 function getInjectionHint(nodeId: string, _label: string, graph?: IRGraph): string {
   const id = nodeId.toUpperCase();
 
+  // ── PCT timer outputs (PCT01T = timed output, PCT01 = input active) ──
+  if (/^PCT\d+T$/i.test(id)) {
+    const pctNum = id.match(/\d+/)?.[0] ?? '';
+    const puSetting = `PCT${pctNum}PU`;
+    if (graph) {
+      const pu = lookupPickupValue(graph, puSetting);
+      if (pu !== null) return `PCT${pctNum} timed output — asserts after ${pu} cycles (${puSetting}=${pu}). PU=0 → immediate.`;
+    }
+    return `PCT${pctNum} timed output — asserts when PCT PU timer expires (see ${puSetting})`;
+  }
+  if (/^PCT\d+$/i.test(id)) return 'SEL programmable timer — verify timing via State Sequencer';
+
   // ── SVxT timer-qualified variable bits ──
-  if (/^SV\d+T$/i.test(id)) return 'Timer-qualified SEL variable — asserts when SV pickup timer expires (PU=0 → immediate)';
+  // Note: SV variables use PU/DO timers. SV1T is the SV1 output after PU timer.
+  if (/^SV\d+T$/i.test(id)) {
+    const svNum = id.match(/\d+/)?.[0] ?? '';
+    const puSetting = `SV${svNum.padStart(2, '0')}PU`;
+    if (graph) {
+      const pu = lookupPickupValue(graph, puSetting);
+      if (pu !== null) return `SV${svNum} timer-qualified output — asserts after ${pu} cycles (${puSetting}=${pu}). PU=0 → immediate.`;
+    }
+    return `SV${svNum} timer-qualified — asserts when SV pickup timer expires (see ${puSetting}). PU=0 → immediate.`;
+  }
   if (/^SV\d+$/i.test(id)) return 'CMC Binary Output → assert SV variable (or set via SELOGIC logic equation)';
   if (/^PSV\d+$/i.test(id)) return 'CMC Binary Output → assert PSV variable (or set via SELOGIC logic equation)';
 
+  // ── PLT programmable latch bits ──
+  if (/^PLT\d+$/i.test(id)) return 'CMC Binary Output → simulate PLT latch SET condition via relay input';
+
+  // ── LT latch bits ──
+  if (/^LT\d+$/i.test(id)) return 'Latch bit — SET/RESET via SELOGIC logic or CMC binary output to relay input';
+
   // ── Timer-delayed element pickup bits (51P1T, 67P1T, 50P1T, etc.) ──
-  if (/^\d{2}[A-Z]\d+T$/i.test(id)) return 'Timer-delayed element pickup — asserts when element PU timer expires';
+  if (/^\d{2}[A-Z]+\d+T$/i.test(id)) return `Timer-delayed element pickup (${id}) — asserts when element time-current characteristic satisfied`;
 
   // ── Phase overcurrent with specific values ──
   if (/^50P/.test(id) || /^51P/.test(id)) {
@@ -642,6 +669,15 @@ function generatePassCriteria(
         tolerance: pickup !== null ? `±${(pickup * 0.03).toFixed(2)}A (±3% of ${pickup}A) or ±0.02A (whichever is greater)` : '±3% of setting or ±0.02A (whichever is greater)',
         assessment: fv.current ? `Ramping module: ramp phase current. ${fv.description}` : 'Ramping module: ramp phase current, trigger on relay output',
       });
+      // No-pickup verification (must NOT operate below setting)
+      if (pickup !== null) {
+        criteria.push({
+          measurement: `${input.label} instantaneous OC — NO PICKUP verification`,
+          expected: `Must NOT operate at ${(pickup * 0.95).toFixed(1)}A (0.95× ${pickupName}=${pickup}A)`,
+          tolerance: 'Element must remain de-asserted for 5 seconds',
+          assessment: `Inject ${(pickup * 0.95).toFixed(1)}A for 5s, verify no output assertion. Confirms pickup is not set too low.`,
+        });
+      }
     } else if (/^51P/.test(id)) {
       const element = id.match(/^(51P\d*)/)?.[1] ?? '51P1';
       const pickupName = element + 'P';
@@ -652,16 +688,25 @@ function generatePassCriteria(
       criteria.push({
         measurement: `${input.label} time-overcurrent pickup`,
         expected: pickupStr,
-        tolerance: pickup !== null ? `±${(pickup * 0.03).toFixed(2)}A (±3% of ${pickup}A)` : '±3% of setting',
+        tolerance: pickup !== null ? `±${(pickup * 0.05).toFixed(2)}A (±5% of ${pickup}A)` : '±5% of setting',
         assessment: 'Ramping module: ramp phase current until pickup',
       });
+      // No-pickup verification
+      if (pickup !== null) {
+        criteria.push({
+          measurement: `${input.label} time-overcurrent — NO PICKUP verification`,
+          expected: `Must NOT pick up at ${(pickup * 0.95).toFixed(1)}A (0.95× ${pickupName}=${pickup}A)`,
+          tolerance: 'Element must remain de-asserted for 5 seconds',
+          assessment: `Inject ${(pickup * 0.95).toFixed(1)}A for 5s, verify no pickup flag.`,
+        });
+      }
       criteria.push({
         measurement: `${input.label} time-overcurrent timing`,
         expected: pickup !== null
           ? `Trip time matches curve at test current. Test at ${(pickup * 2).toFixed(1)}A (2×), ${(pickup * 5).toFixed(1)}A (5×), ${(pickup * 10).toFixed(1)}A (10×)`
           : 'Trip time matches curve at test current',
-        tolerance: '±5% or ±30 ms (whichever is greater)',
-        assessment: 'OCT module: test at 2x, 5x, 10x pickup; compare to curve',
+        tolerance: '±5% or ±2 cycles (whichever is greater)',
+        assessment: 'OCT module: test at 2×, 5×, 10× pickup; compare to published TCC curve',
       });
     } else if (/^27/.test(id)) {
       const pickupName = id.replace(/^(27[A-Z]*\d*).*/, '$1') + 'P';

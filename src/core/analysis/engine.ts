@@ -158,6 +158,34 @@ export function detectUnused(graph: IRGraph): string[] {
 
 // ─── Undefined identifier detection ─────────────────────────────────────────
 
+/** Check if an identifier is a known SEL relay word bit (not a setting, but a valid reference) */
+function isKnownWordBit(id: string): boolean {
+  const u = id.toUpperCase();
+  // Timer-qualified element bits: 51P1T, 67P1T, 50P1T, 50G1T, 21P1T, etc.
+  if (/^\d{2}[A-Z]+\d*T$/.test(u)) return true;
+  // SEL variable timer bits: SV1T, SV01T, SV16T (PU timer expired)
+  if (/^SV\d+T$/.test(u)) return true;
+  // PCT timer outputs: PCT01T, PCT16T
+  if (/^PCT\d+T?$/.test(u)) return true;
+  // PLT latch outputs: PLT01, PLT16
+  if (/^PLT\d+$/.test(u)) return true;
+  // Latch bits: LT1, LT01, LT16
+  if (/^LT\d+$/.test(u)) return true;
+  // Common relay word bits: TRIP, CLOSE, 52A, 52B, FAULT, etc.
+  if (/^(TRIP|CLOSE|FAULT|52A|52B|CC\d*|OC\d*)$/.test(u)) return true;
+  // Physical inputs: IN101-IN116
+  if (/^IN\d{2,3}$/.test(u)) return true;
+  // Breaker failure bits
+  if (/^(BF|BFI|BFT|86|86BF)$/.test(u)) return true;
+  // Reclose bits
+  if (/^79[A-Z]*$/.test(u)) return true;
+  // Protection element pickup flags (no T suffix): 50P1, 51P1, 27P1, 59P1, 67P1, 21P1, etc.
+  if (/^\d{2}[A-Z]+\d*$/.test(u)) return true;
+  // SEL variables themselves (SV01, PSV01) — these are valid word bits
+  if (/^(SV|PSV)\d+$/.test(u)) return true;
+  return false;
+}
+
 export function detectUndefined(
   graph: IRGraph,
   doc: { settings: { name: string }[] }
@@ -166,11 +194,11 @@ export function detectUndefined(
   const undefined_: string[] = [];
   for (const [id, node] of graph.nodes) {
     if (node.kind === 'input' && !defined.has(id) && !/^(AND|OR|NOT)_\d+$/.test(id)) {
-      // External / hardware input — not truly undefined unless it looks like a
-      // software variable (SV, PSV, OC, PCT etc.)
-      if (/^(SV|PSV|OC|MET|OC)\d/i.test(id)) {
-        undefined_.push(id);
-      }
+      // Skip known SEL relay word bits — they are legitimate references
+      // even though they don't have their own setting definition
+      if (isKnownWordBit(id)) continue;
+      // Flag anything that looks like a software variable but isn't a known word bit
+      undefined_.push(id);
     }
   }
   return undefined_;
