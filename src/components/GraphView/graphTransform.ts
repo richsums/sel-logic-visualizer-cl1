@@ -227,17 +227,29 @@ function runDagreLayout(
   return positions;
 }
 
-// ─── Build flow graph ───────────────────────────────────────────────────────
+// ─── Dagre layout cache (avoids re-running dagre on every sim state change) ──
 
-export function buildFlowGraph(
+let _layoutCache: {
+  graphRef: IRGraph;
+  hiddenRef: Set<string> | undefined;
+  positions: Map<string, { x: number; y: number }>;
+  visibleNodes: Array<{ id: string; kind: IRNodeKind; label: string; sourceRawValue?: string; outputClass?: OutputClass }>;
+  visibleEdges: IREdge[];
+  collapsedNotIds: Set<string>;
+} | null = null;
+
+function getCachedLayout(
   graph: IRGraph,
-  simState: SimState | null,
-  selectedId: string | null,
-  highlightedIds: Set<string>,
-  activePaths?: ActivePathRecord[],
-  focusedOutputId?: string | null,
-  hiddenNodeIds?: Set<string>,
-): { nodes: FlowNode[]; edges: FlowEdge[] } {
+  hiddenNodeIds: Set<string> | undefined,
+) {
+  // Reuse cache if graph object identity and hiddenNodeIds identity haven't changed
+  if (
+    _layoutCache &&
+    _layoutCache.graphRef === graph &&
+    _layoutCache.hiddenRef === hiddenNodeIds
+  ) {
+    return _layoutCache;
+  }
 
   // 1. Collapse NOT nodes into negated edges
   const { edges: collapsedEdges, collapsedNotIds } = collapseNotNodes(graph.nodes, graph.edges);
@@ -270,6 +282,25 @@ export function buildFlowGraph(
     visibleNodes.map(n => ({ id: n.id, kind: n.kind })),
     visibleEdges.map(e => ({ source: e.source, target: e.target }))
   );
+
+  _layoutCache = { graphRef: graph, hiddenRef: hiddenNodeIds, positions, visibleNodes, visibleEdges, collapsedNotIds };
+  return _layoutCache;
+}
+
+// ─── Build flow graph ───────────────────────────────────────────────────────
+
+export function buildFlowGraph(
+  graph: IRGraph,
+  simState: SimState | null,
+  selectedId: string | null,
+  highlightedIds: Set<string>,
+  activePaths?: ActivePathRecord[],
+  focusedOutputId?: string | null,
+  hiddenNodeIds?: Set<string>,
+): { nodes: FlowNode[]; edges: FlowEdge[] } {
+
+  // Use cached layout (dagre only reruns when graph or hiddenNodeIds change)
+  const { positions, visibleNodes, visibleEdges } = getCachedLayout(graph, hiddenNodeIds);
 
   // 5. Build causal sets when an output is focused
   let causalNodeSet: Set<string> | null = null;

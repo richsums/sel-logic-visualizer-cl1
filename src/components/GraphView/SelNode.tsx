@@ -429,12 +429,12 @@ function NamedNodeShape({
 // ─── Wrapper with simulation overlays ────────────────────────────────────────
 
 function NodeWrapper({
-  data, children,
+  data, children, colorMode,
 }: {
   data: SelNodeData;
   children: React.ReactNode;
+  colorMode: 'dark' | 'light';
 }) {
-  const colorMode = useAppStore((s) => s.colorMode);
   const c = getColors(data.kind, data.active, data.selected, data.highlighted, colorMode);
   const handleStyle = { background: c.stroke, width: 8, height: 8, border: `2px solid ${c.stroke}` };
 
@@ -504,47 +504,47 @@ export const SelNode = memo(({ data }: { data: SelNodeData }) => {
 
   // AND gate
   if (data.kind === 'and') {
-    return <NodeWrapper data={data}><AndGateShape c={c} /></NodeWrapper>;
+    return <NodeWrapper data={data} colorMode={colorMode}><AndGateShape c={c} /></NodeWrapper>;
   }
 
   // OR gate
   if (data.kind === 'or') {
-    return <NodeWrapper data={data}><OrGateShape c={c} /></NodeWrapper>;
+    return <NodeWrapper data={data} colorMode={colorMode}><OrGateShape c={c} /></NodeWrapper>;
   }
 
   // NOT / inverter
   if (data.kind === 'not') {
-    return <NodeWrapper data={data}><NotGateShape c={c} /></NodeWrapper>;
+    return <NodeWrapper data={data} colorMode={colorMode}><NotGateShape c={c} /></NodeWrapper>;
   }
 
   // Timer
   if (data.kind === 'timer') {
-    return <NodeWrapper data={data}><TimerShape c={c} label={data.label} /></NodeWrapper>;
+    return <NodeWrapper data={data} colorMode={colorMode}><TimerShape c={c} label={data.label} /></NodeWrapper>;
   }
 
   // Latch
   if (data.kind === 'latch') {
-    return <NodeWrapper data={data}><LatchShape c={c} label={data.label} /></NodeWrapper>;
+    return <NodeWrapper data={data} colorMode={colorMode}><LatchShape c={c} label={data.label} /></NodeWrapper>;
   }
 
   // Rising edge trigger
   if (data.kind === 'rising') {
-    return <NodeWrapper data={data}><RisingEdgeShape c={c} /></NodeWrapper>;
+    return <NodeWrapper data={data} colorMode={colorMode}><RisingEdgeShape c={c} /></NodeWrapper>;
   }
 
   // Falling edge trigger
   if (data.kind === 'falling') {
-    return <NodeWrapper data={data}><FallingEdgeShape c={c} /></NodeWrapper>;
+    return <NodeWrapper data={data} colorMode={colorMode}><FallingEdgeShape c={c} /></NodeWrapper>;
   }
 
   // Pulse
   if (data.kind === 'pulse') {
-    return <NodeWrapper data={data}><PulseShape c={c} /></NodeWrapper>;
+    return <NodeWrapper data={data} colorMode={colorMode}><PulseShape c={c} /></NodeWrapper>;
   }
 
   // Named nodes (input, output, derived, function)
   return (
-    <NodeWrapper data={data}>
+    <NodeWrapper data={data} colorMode={colorMode}>
       <NamedNodeShape label={data.label} kind={data.kind} c={c} sourceValue={data.sourceValue} />
     </NodeWrapper>
   );

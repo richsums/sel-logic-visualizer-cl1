@@ -668,6 +668,17 @@
   color: #c4b5fd;
 }
 
+.ledChip {
+  font-size: 0.68rem;
+  font-family: monospace;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  color: #22d3ee;
+}
+
 /* ─── Pass criteria preview ──────────────────────────── */
 .passCriteriaPreview {
   margin-top: 6px;

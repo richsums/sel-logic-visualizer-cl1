@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type NodeMouseHandler,
   type NodeChange,
 } from '@xyflow/react';
@@ -24,6 +26,14 @@ const nodeTypes = { selNode: SelNode };
 const edgeTypes = { negatedEdge: NegatedEdge };
 
 export function GraphView() {
+  return (
+    <ReactFlowProvider>
+      <GraphViewInner />
+    </ReactFlowProvider>
+  );
+}
+
+function GraphViewInner() {
   const {
     graph, simState, selectedNodeId, highlightedNodeIds,
     simFocusedOutputId, simActivePaths, hiddenNodeIds, colorMode,
@@ -34,6 +44,7 @@ export function GraphView() {
 
   // Track graph identity for re-layout
   const prevGraphRef = useRef<typeof graph>(null);
+  const { fitView } = useReactFlow();
 
   // Persistent user-dragged positions
   const dragPositions = useRef(new Map<string, { x: number; y: number }>());
@@ -81,13 +92,17 @@ export function GraphView() {
   }, [graph, simState, selectedNodeId, highlightedNodeIds,
       simActivePaths, simFocusedOutputId, hiddenNodeIds]);
 
-  // Detect graph change → clear drag positions for full re-layout
+  // Detect graph change → clear drag positions for full re-layout and fit view
   useEffect(() => {
     if (graph !== prevGraphRef.current) {
       dragPositions.current.clear();
       prevGraphRef.current = graph;
+      // Defer fitView so React Flow has time to render the new nodes
+      requestAnimationFrame(() => {
+        fitView({ padding: 0.15 });
+      });
     }
-  }, [graph]);
+  }, [graph, fitView]);
 
   // Apply dragged positions over dagre-computed ones
   const nodesWithDrag = useMemo(() => {
@@ -222,10 +237,13 @@ export function GraphView() {
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.15 }}
         minZoom={0.1}
         maxZoom={3}
+        nodesConnectable={false}
+        nodesFocusable={false}
+        edgesFocusable={false}
+        elevateNodesOnSelect={false}
+        selectNodesOnDrag={false}
         colorMode={colorMode}
       >
         <Background color={colorMode === 'dark' ? '#2d3748' : '#e2e8f0'} gap={20} />
