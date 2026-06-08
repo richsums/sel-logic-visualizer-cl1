@@ -3,6 +3,7 @@
 // Works with Omicron CMC test modules (State Sequencer, Ramping, etc.).
 
 import type { IRGraph, IRNode, IREdge, OutputClass } from '../ir/types';
+import { partitionGraph } from '../partition/engine';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,12 @@ export interface TestScenario {
   outputId: string;
   outputLabel: string;
   outputClass: OutputClass;
+  /** Logic-purpose title, e.g. "Trip Logic" (groups scenarios by what they prove) */
+  title: string;
+  /** Full area label, e.g. "Trip Logic — OUT101 / TR / ULTR" */
+  logicGroup: string;
+  /** Owning partition area id */
+  areaId: string;
   paths: LogicPath[];
   binaryIO: BinaryIOEntry[];
   stateSequence: StateSequenceStep[];
@@ -139,43 +146,6 @@ function buildAdj(graph: IRGraph) {
     outgoing.get(edge.source)?.push({ target: edge.target, edgeId: edge.id });
   }
   return { incoming, outgoing };
-}
-
-// ─── Upstream tracing helper ──────────────────────────────────────────────
-
-/** BFS backward from a node, collecting all upstream node IDs */
-function traceUpstreamIds(graph: IRGraph, startId: string): Set<string> {
-  const { incoming } = buildAdj(graph);
-  const visited = new Set<string>();
-  const queue = [startId];
-  while (queue.length > 0) {
-    const cur = queue.shift()!;
-    if (visited.has(cur)) continue;
-    visited.add(cur);
-    for (const pred of incoming.get(cur) ?? []) {
-      if (!visited.has(pred.source)) queue.push(pred.source);
-    }
-  }
-  return visited;
-}
-
-// ─── LED cross-referencing ────────────────────────────────────────────────
-
-/** Find LEDs that share upstream elements with a given output */
-function findLEDsForOutput(graph: IRGraph, outputId: string): string[] {
-  const outputUpstream = traceUpstreamIds(graph, outputId);
-  const relatedLEDs: string[] = [];
-
-  for (const [id, node] of graph.nodes) {
-    if (node.kind === 'output' && /^LED\d+$/i.test(id) && id !== outputId) {
-      const ledUpstream = traceUpstreamIds(graph, id);
-      const overlap = [...ledUpstream].filter(n => outputUpstream.has(n));
-      if (overlap.length > 0) {
-        relatedLEDs.push(id);
-      }
-    }
-  }
-  return relatedLEDs;
 }
 
 // ─── Specific fault injection values ──────────────────────────────────────
@@ -941,7 +911,6 @@ function buildStateSequence(
   conditions: InputCondition[],
   intermediates: IntermediateDetail[],
   graph: IRGraph,
-  expectedLEDs: string[],
 ): StateSequenceStep[] {
   const steps: StateSequenceStep[] = [];
 
@@ -1018,20 +987,14 @@ function buildStateSequence(
     ? ` (expected delay: ${timers.map(t => `${t.label}=${t.delaySetting}`).join(', ')})`
     : '';
 
-  // LED note
-  const ledNote = expectedLEDs.length > 0
-    ? `. Expected LEDs: ${expectedLEDs.join(', ')}`
-    : '';
-
   steps.push({
     name: 'Fault / Assert',
-    description: `Apply conditions to assert ${outputLabel}${timerNote}${ledNote}`,
+    description: `Apply conditions to assert ${outputLabel}${timerNote}`,
     transition: `Trigger: ${outputLabel} asserts (CMC BI) — Timeout: 10 seconds (fail)`,
     analogHint: faultAnalog,
     binaryOutputs: faultBinOutputs,
     expectedInputs: [
       { label: outputLabel, state: true },
-      ...expectedLEDs.map(led => ({ label: `${led} (illuminated)`, state: true })),
     ],
   });
 
@@ -1084,20 +1047,17 @@ export function generateTestScenarios(graph: IRGraph): TestScenario[] {
   const scenarios: TestScenario[] = [];
   const binaryIO = classifyBinaryIO(graph);
 
-  const outputs: IRNode[] = [];
-  for (const [_id, node] of graph.nodes) {
-    if (node.kind === 'output') outputs.push(node);
-  }
+  // Drive scenarios from the same partition areas the graph displays, so tests
+  // exist only for on-graph logic. LED/display areas are already excluded by the
+  // partition engine. Each area's roots become the testable outputs, tagged with
+  // the area's logic-purpose title.
+  const { areas } = partitionGraph(graph);
 
-  const classPriority: Record<OutputClass, number> = {
-    trip: 0, close: 1, breaker_failure: 2, reclose: 3,
-    alarm: 4, block: 5, supervisory: 6, display: 7, led: 8, other: 9,
-  };
-  outputs.sort((a, b) =>
-    (classPriority[a.outputClass ?? 'other'] ?? 9) - (classPriority[b.outputClass ?? 'other'] ?? 9)
-  );
-
-  for (const output of outputs) {
+  for (const area of areas) {
+   for (const rootId of area.rootIds) {
+    const output = graph.nodes.get(rootId);
+    if (!output || output.kind !== 'output') continue;
+    if (output.outputClass === 'led' || output.outputClass === 'display') continue;
     const inputSets = computeMinInputSets(graph, output.id);
     const allIntermediates = collectIntermediates(graph, output.id);
     const timerDetails = allIntermediates.filter(d => d.kind === 'timer');
@@ -1143,11 +1103,8 @@ export function generateTestScenarios(graph: IRGraph): TestScenario[] {
       ? paths.reduce((a, b) => a.requiredInputs.length <= b.requiredInputs.length ? a : b)
       : null;
 
-    // Find related LEDs for this output
-    const expectedLEDs = findLEDsForOutput(graph, output.id);
-
     const stateSequence = simplest
-      ? buildStateSequence(output.id, output.label, simplest.requiredInputs, allIntermediates, graph, expectedLEDs)
+      ? buildStateSequence(output.id, output.label, simplest.requiredInputs, allIntermediates, graph)
       : [];
 
     const relevantIO = binaryIO.filter(bio =>
@@ -1159,13 +1116,17 @@ export function generateTestScenarios(graph: IRGraph): TestScenario[] {
       outputId: output.id,
       outputLabel: output.label,
       outputClass: output.outputClass ?? 'other',
+      title: area.purpose,
+      logicGroup: area.label,
+      areaId: area.id,
       paths,
       binaryIO: relevantIO.length > 0 ? relevantIO : binaryIO.filter(b => b.relayTerminal === output.id),
       stateSequence,
       latchDetails,
       timerDetails,
-      expectedLEDs,
+      expectedLEDs: [],
     });
+   }
   }
 
   return scenarios;

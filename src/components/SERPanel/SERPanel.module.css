@@ -1,0 +1,582 @@
+/* ─── SER Timeline Panel ─────────────────────────────────────────────────── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--c-bg);
+  color: var(--c-text-primary);
+  font-family: inherit;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem 0.5rem;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--c-text-primary);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ─── Upload area ────────────────────────────────────────────────────────── */
+
+.uploadArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 2rem 1rem;
+  gap: 1rem;
+  overflow: auto;
+}
+
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 420px;
+  padding: 2.5rem 2rem;
+  border: 2px dashed var(--c-border);
+  border-radius: 10px;
+  background: var(--c-surface-2);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+}
+.dropZone:hover, .dropZoneActive {
+  border-color: var(--c-accent);
+  background: rgba(59,130,246,0.06);
+}
+
+.dropIcon {
+  font-size: 2.5rem;
+  opacity: 0.6;
+}
+
+.dropTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--c-text-primary);
+}
+
+.dropSub {
+  font-size: 0.76rem;
+  color: var(--c-text-muted);
+  line-height: 1.4;
+}
+
+.browseBtn {
+  padding: 0.45rem 1.2rem;
+  background: var(--c-accent);
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.12s;
+}
+.browseBtn:hover { opacity: 0.85; }
+
+.fileInput { display: none; }
+
+.formatNote {
+  font-size: 0.72rem;
+  color: var(--c-text-muted);
+  text-align: center;
+  max-width: 380px;
+  line-height: 1.5;
+}
+
+/* ─── Warning banner ─────────────────────────────────────────────────────── */
+
+.warnBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(245,158,11,0.08);
+  border-bottom: 1px solid rgba(245,158,11,0.25);
+  font-size: 0.74rem;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* ─── Summary bar ────────────────────────────────────────────────────────── */
+
+.summaryBar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--c-surface-2);
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.summaryItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.73rem;
+}
+
+.summaryLabel {
+  color: var(--c-text-muted);
+  font-weight: 500;
+}
+
+.summaryValue {
+  color: var(--c-text-primary);
+  font-weight: 700;
+  font-family: monospace;
+}
+
+/* ─── Filter / toolbar ───────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.filterInput {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.3rem 0.6rem;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 5px;
+  color: var(--c-text-primary);
+  font-size: 0.76rem;
+  font-family: monospace;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.filterInput::placeholder { color: var(--c-text-muted); }
+.filterInput:focus { border-color: var(--c-accent); }
+
+.filterLabel {
+  font-size: 0.72rem;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.classFilter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.classChip {
+  padding: 0.2rem 0.55rem;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.12s, border-color 0.12s;
+  user-select: none;
+  letter-spacing: 0.04em;
+  opacity: 0.45;
+}
+.classChip.active {
+  opacity: 1;
+  border-color: currentColor;
+}
+
+/* ─── Timeline container ─────────────────────────────────────────────────── */
+
+.timelineContainer {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.75rem 1rem 2rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Burst group ────────────────────────────────────────────────────────── */
+
+.burstGroup {
+  margin-bottom: 1rem;
+}
+
+.burstHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.burstTime {
+  font-size: 0.68rem;
+  font-family: monospace;
+  color: var(--c-text-muted);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.burstLine {
+  flex: 1;
+  height: 1px;
+  background: var(--c-border);
+  opacity: 0.5;
+}
+
+.burstCount {
+  font-size: 0.62rem;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+/* ─── Event row ──────────────────────────────────────────────────────────── */
+
+.eventRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.12s;
+  position: relative;
+}
+.eventRow:hover {
+  background: var(--c-surface-2);
+}
+
+/* Left: timeline spine */
+.eventSpine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 14px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.eventDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+}
+
+.eventDot.asserted {
+  background: currentColor;
+}
+
+.eventDot.deasserted {
+  background: transparent;
+}
+
+.eventSpineLine {
+  width: 2px;
+  flex: 1;
+  min-height: 6px;
+  background: var(--c-border);
+  margin-top: 2px;
+}
+
+/* Middle: time column */
+.eventTime {
+  width: 85px;
+  flex-shrink: 0;
+  font-family: monospace;
+  font-size: 0.67rem;
+  color: var(--c-text-muted);
+  line-height: 1.3;
+  padding-top: 2px;
+}
+
+.eventTimeMain {
+  color: var(--c-text-secondary);
+  font-weight: 600;
+}
+
+.eventTimeRel {
+  color: var(--c-text-muted);
+  font-size: 0.6rem;
+}
+
+/* Right: event content */
+.eventContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.eventTopRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.eventId {
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--c-text-primary);
+}
+
+.eventStateBadge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.stateBadgeAsserted {
+  background: rgba(34,197,94,0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34,197,94,0.3);
+}
+
+.stateBadgeDeasserted {
+  background: rgba(239,68,68,0.1);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.25);
+}
+
+.classBadge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.eventDesc {
+  font-size: 0.7rem;
+  color: var(--c-text-muted);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.eventGraphBtn {
+  padding: 0.18rem 0.55rem;
+  font-size: 0.64rem;
+  font-weight: 600;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 4px;
+  color: var(--c-accent);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+.eventGraphBtn:hover {
+  background: rgba(59,130,246,0.2);
+  border-color: var(--c-accent);
+}
+
+/* ─── Empty / no-doc states ──────────────────────────────────────────────── */
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 3rem 2rem;
+  font-size: 0.82rem;
+  color: var(--c-text-muted);
+  text-align: center;
+}
+
+.noData {
+  text-align: center;
+  padding: 2rem;
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  padding: 0.35rem 0.8rem;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: 5px;
+  color: var(--c-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.btn:hover {
+  background: var(--c-surface-3);
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+.btnDanger {
+  background: rgba(239,68,68,0.08);
+  border-color: rgba(239,68,68,0.25);
+  color: #f87171;
+}
+.btnDanger:hover {
+  background: rgba(239,68,68,0.15);
+  border-color: #f87171;
+}
+
+/* ─── Element class colour tokens ────────────────────────────────────────── */
+
+.classProtection  { color: #f87171; } /* red */
+.classTimer       { color: #fb923c; } /* orange */
+.classOutput      { color: #4ade80; } /* green */
+.classInput       { color: #60a5fa; } /* blue */
+.classLatch       { color: #a78bfa; } /* purple */
+.classVariable    { color: #22d3ee; } /* cyan */
+.classBreaker     { color: #facc15; } /* yellow */
+.classReclose     { color: #34d399; } /* teal */
+.classBreakerFail { color: #f43f5e; } /* rose */
+.classUnknown     { color: var(--c-text-muted); }
+
+/* Badge background variants */
+.classBadgeProtection  { background: rgba(248,113,113,0.12);  color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+.classBadgeTimer       { background: rgba(251,146,60,0.12);   color: #fb923c; border: 1px solid rgba(251,146,60,0.25); }
+.classBadgeOutput      { background: rgba(74,222,128,0.12);   color: #4ade80; border: 1px solid rgba(74,222,128,0.25); }
+.classBadgeInput       { background: rgba(96,165,250,0.12);   color: #60a5fa; border: 1px solid rgba(96,165,250,0.25); }
+.classBadgeLatch       { background: rgba(167,139,250,0.12);  color: #a78bfa; border: 1px solid rgba(167,139,250,0.25); }
+.classBadgeVariable    { background: rgba(34,211,238,0.12);   color: #22d3ee; border: 1px solid rgba(34,211,238,0.25); }
+.classBadgeBreaker     { background: rgba(250,204,21,0.12);   color: #facc15; border: 1px solid rgba(250,204,21,0.25); }
+.classBadgeReclose     { background: rgba(52,211,153,0.12);   color: #34d399; border: 1px solid rgba(52,211,153,0.25); }
+.classBadgeBreakerFail { background: rgba(244,63,94,0.12);    color: #f43f5e; border: 1px solid rgba(244,63,94,0.25); }
+.classBadgeUnknown     { background: var(--c-surface-2); color: var(--c-text-muted); border: 1px solid var(--c-border); }
+
+/* ─── Legend ─────────────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  border-top: 1px solid var(--c-border);
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.legendTitle {
+  font-size: 0.65rem;
+  color: var(--c-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 0.25rem;
+}
+
+/* ─── Graph modal overlay ─────────────────────────────────────────────────── */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modalContent {
+  background: var(--c-surface-1);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 420px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modalTitle {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--c-text-primary);
+}
+
+.modalDesc {
+  font-size: 0.76rem;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .eventTime {
+    width: 68px;
+    font-size: 0.6rem;
+  }
+
+  .eventId {
+    font-size: 0.76rem;
+  }
+
+  .toolbar {
+    padding: 0.35rem 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .summaryBar {
+    padding: 0.4rem 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .header {
+    padding: 0.6rem 0.5rem 0.4rem;
+  }
+
+  .timelineContainer {
+    padding: 0.5rem 0.5rem 2rem;
+  }
+}

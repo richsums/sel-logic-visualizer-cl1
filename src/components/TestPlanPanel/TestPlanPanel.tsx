@@ -251,9 +251,22 @@ function TestPlanTab({
     return <div className={styles.empty}>No outputs found in the logic graph.</div>;
   }
 
+  // Group scenarios by logic purpose (the partition area) so tests are organized
+  // by what they prove rather than by element/output id.
+  const groups: { label: string; scenarios: TestScenario[] }[] = [];
+  for (const s of scenarios) {
+    const key = s.logicGroup || s.title || s.outputLabel;
+    let g = groups.find(gr => gr.label === key);
+    if (!g) { g = { label: key, scenarios: [] }; groups.push(g); }
+    g.scenarios.push(s);
+  }
+
   return (
     <>
-      {scenarios.map(s => {
+      {groups.map(group => (
+        <div key={group.label} className={styles.logicGroup}>
+          <div className={styles.logicGroupHeader}>{group.label}</div>
+          {group.scenarios.map(s => {
         const expanded = expandedOutputs.has(s.outputId);
         const badgeInfo = OUTPUT_CLASS_BADGE[s.outputClass] ?? OUTPUT_CLASS_BADGE.other;
         const checkedCount = s.paths.filter(p => p.checked).length;
@@ -292,21 +305,6 @@ function TestPlanTab({
                     {s.timerDetails.map(t => (
                       <TimerDetailCard key={t.nodeId} detail={t} />
                     ))}
-                  </div>
-                )}
-
-                {/* Expected LEDs */}
-                {s.expectedLEDs && s.expectedLEDs.length > 0 && (
-                  <div className={styles.detailSection}>
-                    <div className={styles.detailSectionTitle}>Expected LED Indications</div>
-                    <div className={styles.pathIntermediates}>
-                      {s.expectedLEDs.map(led => (
-                        <span key={led} className={styles.ledChip}>{led}</span>
-                      ))}
-                    </div>
-                    <div className={styles.injectionHint}>
-                      Visually verify these front-panel LED targets illuminate upon trip/operation
-                    </div>
                   </div>
                 )}
 
@@ -354,7 +352,9 @@ function TestPlanTab({
             )}
           </div>
         );
-      })}
+          })}
+        </div>
+      ))}
     </>
   );
 }

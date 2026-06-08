@@ -1,5 +1,5 @@
 // ─── Analysis engine ─────────────────────────────────────────────────────────
-import type { IRGraph, IRNode, IREdge } from '../ir/types';
+import type { IRGraph, IRNode, IREdge, IRNodeKind } from '../ir/types';
 
 export interface TraceResult {
   /** All node IDs in the upstream cone (inputs → selected node) */
@@ -154,6 +154,95 @@ export function detectUnused(graph: IRGraph): string[] {
     }
   }
   return unused;
+}
+
+// ─── Unused-in-logic detection ──────────────────────────────────────────────
+// Reports defined signals that do NOT participate in any displayed logic area
+// (i.e. are absent from the partition's `usedLogicalIds`). Grouped for the UI.
+
+export type UnusedGroup = 'output' | 'variable' | 'signal';
+
+export interface UnusedItem {
+  id: string;
+  label: string;
+  kind: IRNodeKind;
+  group: UnusedGroup;
+  reason: string;
+}
+
+// Names that look like an output contact/coil (used to surface OUTxxx = 0).
+const OUTPUT_NAME_RE = /^(OUT\d|SS\d|TR$|CL$|CC$|BFI$|BFT$|86)/i;
+// SELogic variables / latches / counters.
+const VAR_RE = /^(SV|PSV|LT|PLT|PCT|RB|PB)\d+/i;
+// Protection element word bits (50P1, 51P1T, 67G2T, 27P1, …).
+const ELEMENT_BIT_RE = /^\d{2}[A-Z]/;
+
+/**
+ * @param graph  master IR graph
+ * @param used   set of logical node ids that appear in at least one logic area
+ */
+export function computeUnusedSettings(graph: IRGraph, used: Set<string>): UnusedItem[] {
+  const items: UnusedItem[] = [];
+
+  // Element/global parameter settings (curve types, reset flags, pickups) are
+  // configuration of an element, not logic elements — never flag them as "unused".
+  const paramSettings = new Set<string>([
+    ...graph.elementSettingNames,
+    ...graph.globalSettingNames,
+  ]);
+
+  for (const [id, node] of graph.nodes) {
+    if (used.has(id)) continue;
+    if (node.kind === 'and' || node.kind === 'or' || node.kind === 'not') continue;
+    // Indication outputs (LED / display) are intentionally off-graph, not "unused".
+    if (node.kind === 'output' && (node.outputClass === 'led' || node.outputClass === 'display')) continue;
+
+    if (node.kind === 'numeric') {
+      // Only surface numeric nodes that are disabled output contacts (OUT104 = 0).
+      if (OUTPUT_NAME_RE.test(id)) {
+        items.push({
+          id, label: node.label, kind: node.kind, group: 'output',
+          reason: `Output set to ${node.numericValue ?? '0'} — no logic assigned`,
+        });
+      }
+      continue;
+    }
+
+    if (node.kind === 'output') {
+      items.push({
+        id, label: node.label, kind: node.kind, group: 'output',
+        reason: 'Output contact not driven by any logic',
+      });
+      continue;
+    }
+
+    if (VAR_RE.test(id)) {
+      items.push({
+        id, label: node.label, kind: node.kind, group: 'variable',
+        reason: 'Variable / latch does not feed any energized output',
+      });
+      continue;
+    }
+
+    if (node.kind === 'derived') {
+      items.push({
+        id, label: node.label, kind: node.kind, group: 'signal',
+        reason: 'Derived signal does not feed any energized output',
+      });
+      continue;
+    }
+
+    // Input word bits: only surface protection elements (skip curve/param inputs).
+    if (node.kind === 'input' && ELEMENT_BIT_RE.test(id) && !paramSettings.has(id)) {
+      items.push({
+        id, label: node.label, kind: node.kind, group: 'signal',
+        reason: 'Element not referenced in any displayed logic',
+      });
+    }
+  }
+
+  items.sort((a, b) => a.group.localeCompare(b.group) || a.id.localeCompare(b.id));
+  return items;
 }
 
 // ─── Undefined identifier detection ─────────────────────────────────────────

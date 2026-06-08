@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { computeUnusedSettings, type UnusedGroup } from '../../core/analysis/engine';
+import { partitionGraph } from '../../core/partition/engine';
 import styles from './DiagnosticsPanel.module.css';
 
+const UNUSED_GROUP_TITLE: Record<UnusedGroup, string> = {
+  output: 'Output contacts with no logic',
+  variable: 'Variables / latches not feeding an output',
+  signal: 'Elements / signals not used in logic',
+};
+
 export function DiagnosticsPanel() {
-  const { docA } = useAppStore();
+  const { docA, graph } = useAppStore();
+
+  const unused = useMemo(() => {
+    if (!graph) return [];
+    const { usedLogicalIds } = partitionGraph(graph);
+    return computeUnusedSettings(graph, usedLogicalIds);
+  }, [graph]);
 
   if (!docA) return <div className={styles.empty}>No document loaded.</div>;
 
@@ -39,6 +53,32 @@ export function DiagnosticsPanel() {
           )}
         </div>
       ))}
+
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Unused in logic ({unused.length})</div>
+        {unused.length === 0 ? (
+          <div className={styles.row}><span>All defined elements are used in the logic.</span></div>
+        ) : (
+          (['output', 'variable', 'signal'] as const).map(group => {
+            const items = unused.filter(u => u.group === group);
+            if (items.length === 0) return null;
+            return (
+              <div key={group} style={{ marginBottom: 8 }}>
+                <div className={styles.row} style={{ opacity: 0.7, fontSize: 11, marginTop: 4 }}>
+                  <span>{UNUSED_GROUP_TITLE[group]}</span>
+                  <span className={styles.count}>{items.length}</span>
+                </div>
+                {items.map(u => (
+                  <div key={u.id} className={styles.row} title={u.reason}>
+                    <span style={{ fontFamily: 'monospace' }}>{u.label}</span>
+                    <span className={styles.count} style={{ fontSize: 10, opacity: 0.7 }}>{u.reason}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })
+        )}
+      </div>
 
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Lines summary</div>

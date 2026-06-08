@@ -5,6 +5,7 @@ import type { IRGraph } from '../core/ir/types';
 import type { SimState, ActivePathRecord } from '../core/simulation/engine';
 import type { ComparisonResult } from '../core/comparison/engine';
 import type { AnalysisReport } from '../core/analysis/engine';
+import type { SEREvent } from '../core/ser/parser';
 
 export type AppPanel =
   | 'import'
@@ -17,7 +18,8 @@ export type AppPanel =
   | 'simulation'
   | 'comparison'
   | 'tutorial'
-  | 'testplan';
+  | 'testplan'
+  | 'ser';
 
 export type SimViewMode = 'compact' | 'expanded';
 export type ColorMode = 'dark' | 'light';
@@ -40,14 +42,19 @@ interface AppState {
   simInputFilter: string;
   simViewMode: SimViewMode;
 
+  // SER events
+  serEvents: SEREvent[];
+
   // UI state
   activePanel: AppPanel;
   selectedNodeId: string | null;
   highlightedNodeIds: Set<string>;
   hiddenNodeIds: Set<string>;
+  showUnusedOverlay: boolean;
   colorMode: ColorMode;
 
   // Actions
+  setSerEvents: (events: SEREvent[]) => void;
   setDocA: (doc: ImportedSettingsDocument) => void;
   setDocB: (doc: ImportedSettingsDocument) => void;
   setGraph: (g: IRGraph) => void;
@@ -64,6 +71,7 @@ interface AppState {
   setHighlightedNodeIds: (ids: Set<string>) => void;
   hideNode: (id: string) => void;
   clearHiddenNodes: () => void;
+  toggleUnusedOverlay: () => void;
   toggleColorMode: () => void;
   reset: () => void;
 }
@@ -80,12 +88,15 @@ export const useAppStore = create<AppState>((set) => ({
   simActivePaths: [],
   simInputFilter: '',
   simViewMode: 'expanded',
+  serEvents: [],
   activePanel: 'import',
   selectedNodeId: null,
   highlightedNodeIds: new Set(),
   hiddenNodeIds: new Set(),
+  showUnusedOverlay: false,
   colorMode: 'dark',
 
+  setSerEvents: (serEvents) => set({ serEvents }),
   setDocA: (docA) => set({ docA }),
   setDocB: (docB) => set({ docB }),
   setGraph: (graph) => set({ graph }),
@@ -106,6 +117,7 @@ export const useAppStore = create<AppState>((set) => ({
     return { hiddenNodeIds: next };
   }),
   clearHiddenNodes: () => set({ hiddenNodeIds: new Set() }),
+  toggleUnusedOverlay: () => set((state) => ({ showUnusedOverlay: !state.showUnusedOverlay })),
   toggleColorMode: () => set((state) => ({
     colorMode: state.colorMode === 'dark' ? 'light' : 'dark',
   })),

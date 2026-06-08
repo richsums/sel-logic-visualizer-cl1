@@ -13,17 +13,25 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppStore } from '../../store/appStore';
-import { buildFlowGraph, type FlowNode, type FlowEdge } from './graphTransform';
+import { buildFlowGraph, type GraphNode, type FlowEdge } from './graphTransform';
 import { SelNode } from './SelNode';
+import { AreaFrame } from './AreaFrame';
 import { NegatedEdge } from './NegatedEdge';
 import { ContextMenu } from './ContextMenu';
 import { useLongPress } from './useLongPress';
-import { traceNode } from '../../core/analysis/engine';
+import { traceNode, computeUnusedSettings } from '../../core/analysis/engine';
+import { partitionGraph } from '../../core/partition/engine';
 import { setInput, stepSimulation, resetSimulation, createSimState } from '../../core/simulation/engine';
 import styles from './GraphView.module.css';
 
-const nodeTypes = { selNode: SelNode };
+const nodeTypes = { selNode: SelNode, areaFrame: AreaFrame };
 const edgeTypes = { negatedEdge: NegatedEdge };
+
+/** Extract the logical (master-graph) id from an area-scoped flow id. */
+function toLogicalId(flowId: string): string {
+  const idx = flowId.indexOf('::');
+  return idx === -1 ? flowId : flowId.slice(idx + 2);
+}
 
 export function GraphView() {
   return (
@@ -37,10 +45,21 @@ function GraphViewInner() {
   const {
     graph, simState, selectedNodeId, highlightedNodeIds,
     simFocusedOutputId, simActivePaths, hiddenNodeIds, colorMode,
+    showUnusedOverlay, toggleUnusedOverlay,
     setSelectedNodeId, setHighlightedNodeIds, setActivePanel,
     setSimFocusedOutputId, setSimState, setSimActivePaths,
     hideNode,
   } = useAppStore();
+
+  // Unused-in-logic items (for the optional greyed overlay area).
+  const unusedDisplayItems = useMemo(() => {
+    if (!graph) return undefined;
+    const { usedLogicalIds } = partitionGraph(graph);
+    return computeUnusedSettings(graph, usedLogicalIds).map(u => ({
+      id: u.id, label: u.label, kind: u.kind,
+      outputClass: graph.nodes.get(u.id)?.outputClass,
+    }));
+  }, [graph]);
 
   // Track graph identity for re-layout
   const prevGraphRef = useRef<typeof graph>(null);
@@ -62,18 +81,21 @@ function GraphViewInner() {
       el = el.parentElement;
     }
     if (!el) return;
-    const nodeId = el.getAttribute('data-id');
-    if (!nodeId || !graph) return;
+    const flowId = el.getAttribute('data-id');
+    if (!flowId || !graph) return;
+    const logicalId = toLogicalId(flowId);
+    // Ignore area frames (no logical node) and unused-overlay chips.
+    if (flowId.startsWith('area_unused::') || !graph.nodes.has(logicalId)) return;
 
     // Haptic feedback on mobile if available
     if (navigator.vibrate) navigator.vibrate(30);
 
-    const irNode = graph.nodes.get(nodeId);
+    const irNode = graph.nodes.get(logicalId);
     setContextMenu({
       x,
       y,
-      nodeId,
-      nodeLabel: irNode?.label ?? nodeId,
+      nodeId: logicalId,
+      nodeLabel: irNode?.label ?? logicalId,
     });
   }, [graph]);
 
@@ -84,13 +106,15 @@ function GraphViewInner() {
 
   // Build the flow graph data
   const flowData = useMemo(() => {
-    if (!graph) return { nodes: [], edges: [] };
+    if (!graph) return { nodes: [] as GraphNode[], edges: [] as FlowEdge[] };
     return buildFlowGraph(
       graph, simState, selectedNodeId, highlightedNodeIds,
       simActivePaths, simFocusedOutputId, hiddenNodeIds,
+      showUnusedOverlay, unusedDisplayItems,
     );
   }, [graph, simState, selectedNodeId, highlightedNodeIds,
-      simActivePaths, simFocusedOutputId, hiddenNodeIds]);
+      simActivePaths, simFocusedOutputId, hiddenNodeIds,
+      showUnusedOverlay, unusedDisplayItems]);
 
   // Detect graph change → clear drag positions for full re-layout and fit view
   useEffect(() => {
@@ -122,7 +146,7 @@ function GraphViewInner() {
   }, [nodesWithDrag, flowData.edges, setNodes, setEdges]);
 
   // Capture drag position changes
-  const handleNodesChange = useCallback((changes: NodeChange<FlowNode>[]) => {
+  const handleNodesChange = useCallback((changes: NodeChange<GraphNode>[]) => {
     onNodesChange(changes);
     for (const change of changes) {
       if (change.type === 'position' && change.position) {
@@ -132,13 +156,18 @@ function GraphViewInner() {
   }, [onNodesChange]);
 
   // ─── Left-click / tap: toggle logical state ─────────────────────────────
-  const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
+  const onNodeClick: NodeMouseHandler<GraphNode> = useCallback((_event, node) => {
     // Suppress tap if it was actually a long-press (mobile context menu)
     if (didLongPress.current) {
       didLongPress.current = false;
       return;
     }
     if (!graph) return;
+    // Frames and unused-overlay chips are not interactive.
+    if (node.type !== 'selNode') return;
+    const data = node.data as { logicalId?: string; unused?: boolean };
+    if (data.unused) return;
+    const logicalId = data.logicalId ?? toLogicalId(node.id);
 
     // Ensure sim state exists
     let state = simState;
@@ -146,9 +175,9 @@ function GraphViewInner() {
       state = createSimState(graph);
     }
 
-    // Toggle the signal for this node
-    const current = state.signals.get(node.id) ?? false;
-    const toggled = setInput(state, node.id, !current);
+    // Toggle the signal for this logical node (all duplicate instances follow)
+    const current = state.signals.get(logicalId) ?? false;
+    const toggled = setInput(state, logicalId, !current);
 
     // Propagate
     const next = stepSimulation(graph, toggled);
@@ -156,21 +185,25 @@ function GraphViewInner() {
     setSimActivePaths(next.activePaths);
 
     // Highlight the selected node
-    setSelectedNodeId(node.id);
-    const trace = traceNode(graph, node.id);
-    const highlighted = new Set([...trace.upstream, node.id, ...trace.downstream]);
+    setSelectedNodeId(logicalId);
+    const trace = traceNode(graph, logicalId);
+    const highlighted = new Set([...trace.upstream, logicalId, ...trace.downstream]);
     setHighlightedNodeIds(highlighted);
   }, [graph, simState, setSimState, setSimActivePaths, setSelectedNodeId, setHighlightedNodeIds]);
 
   // ─── Right-click: context menu ──────────────────────────────────────────
-  const onNodeContextMenu: NodeMouseHandler = useCallback((event, node) => {
+  const onNodeContextMenu: NodeMouseHandler<GraphNode> = useCallback((event, node) => {
     event.preventDefault();
-    const irNode = graph?.nodes.get(node.id);
+    if (node.type !== 'selNode') return;
+    const data = node.data as { logicalId?: string; unused?: boolean };
+    if (data.unused) return;
+    const logicalId = data.logicalId ?? toLogicalId(node.id);
+    const irNode = graph?.nodes.get(logicalId);
     setContextMenu({
       x: (event as unknown as MouseEvent).clientX,
       y: (event as unknown as MouseEvent).clientY,
-      nodeId: node.id,
-      nodeLabel: irNode?.label ?? node.id,
+      nodeId: logicalId,
+      nodeLabel: irNode?.label ?? logicalId,
     });
   }, [graph]);
 
@@ -264,6 +297,15 @@ function GraphViewInner() {
       <div className={styles.graphToolbar}>
         <button className={styles.toolbarBtn} onClick={handleResetStates} title="Reset all toggled states to default">
           Reset States
+        </button>
+        <button
+          className={styles.toolbarBtn}
+          onClick={toggleUnusedOverlay}
+          title="Show/hide elements not used in any logic area"
+          style={showUnusedOverlay ? { borderColor: '#64748b', color: '#cbd5e1' } : undefined}
+        >
+          {showUnusedOverlay ? 'Hide Unused' : 'Show Unused'}
+          {unusedDisplayItems && unusedDisplayItems.length > 0 ? ` (${unusedDisplayItems.length})` : ''}
         </button>
       </div>
 

@@ -19,6 +19,11 @@ interface SelNodeData {
   timerInfo?: TimerInfo;
   outputClass?: OutputClass;
   changedThisStep: boolean;
+  // Partition fields
+  logicalId?: string;
+  areaId?: string;
+  duplicated?: boolean;
+  unused?: boolean;
 }
 
 // ─── Color scheme per kind ────────────────────────────────────────────────────
@@ -107,6 +112,21 @@ function ForcedBadge() {
       boxShadow: '0 0 4px rgba(245,158,11,0.6)',
     }}>
       F
+    </div>
+  );
+}
+
+function DuplicateBadge() {
+  return (
+    <div style={{
+      position: 'absolute', bottom: -6, right: -6, zIndex: 10,
+      width: 15, height: 15, borderRadius: '50%',
+      background: '#64748b', color: '#fff',
+      fontSize: 9, fontWeight: 900, fontFamily: 'monospace',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      border: '1.5px solid #94a3b8',
+    }} title="Shared element — synced across areas">
+      ⧉
     </div>
   );
 }
@@ -483,6 +503,7 @@ function NodeWrapper({
     }}>
       {data.forced && <ForcedBadge />}
       {data.latched && <LatchedBadge />}
+      {data.duplicated && <DuplicateBadge />}
       <Handle type="target" position={Position.Left}
         style={{ ...handleStyle, top: data.kind === 'latch' ? '32%' : '50%' }} />
       {children}
